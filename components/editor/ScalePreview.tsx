@@ -1,0 +1,47 @@
+import type { ResolvedStep } from "@/lib/scale";
+
+export interface ScalePreviewProps {
+  steps: ResolvedStep[];
+  // Unused for now — reserved so a future public /s/[slug] share page can
+  // render this exact component server-side with readOnly set, per the spec's
+  // "same component, readOnly prop" reuse pattern.
+  readOnly?: boolean;
+}
+
+// No "use client" — this is a plain function of props with zero hooks, so it
+// can be rendered from a server component later without forcing a client
+// boundary (see readOnly above).
+export function ScalePreview({ steps, readOnly = false }: ScalePreviewProps) {
+  return (
+    <section
+      aria-label="Scale preview"
+      // A data attribute, not aria-readonly — that ARIA attribute isn't valid
+      // on this element's implicit role and trips an eslint a11y warning.
+      data-readonly={readOnly || undefined}
+      className="flex w-full flex-col gap-6 p-4"
+    >
+      {steps.map((s) => (
+        <div
+          key={s.step}
+          className="flex items-baseline gap-3 border-b border-gray-200 pb-2"
+        >
+          <span className="w-20 shrink-0 text-xs text-gray-500">{s.label}</span>
+          <p
+            className="m-0"
+            // Inline style, not Tailwind classes: these values come from
+            // resolveScale() at runtime, and Tailwind can only generate
+            // classes for strings it sees at build time.
+            style={{
+              fontSize: `${s.fontSizePx}px`,
+              fontWeight: s.weight,
+              lineHeight: s.lineHeight,
+              letterSpacing: `${s.letterSpacing}em`,
+            }}
+          >
+            The quick brown fox jumps over the lazy dog
+          </p>
+        </div>
+      ))}
+    </section>
+  );
+}
