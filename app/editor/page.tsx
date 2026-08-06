@@ -5,8 +5,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { editorReducer, initialEditorConfig } from "@/lib/editor-reducer";
 import { resolveScale, type ScaleConfig } from "@/lib/scale";
 import { decodeConfig, encodeConfig } from "@/lib/url-state";
+import { toCSS, toTailwind, toTokens } from "@/lib/exports";
 import { ControlsPanel } from "@/components/editor/ControlsPanel";
 import { ScalePreview } from "@/components/editor/ScalePreview";
+import { ExportSheet } from "@/components/editor/ExportSheet";
 
 const URL_PARAM = "c";
 const URL_SYNC_DEBOUNCE_MS = 300;
@@ -37,6 +39,14 @@ function EditorPageInner() {
   // useMemo avoids recomputing the scale on renders that don't change config
   // (e.g. if this page ever gets sibling state that re-renders independently).
   const steps = useMemo(() => resolveScale(config), [config]);
+  const exportOutputs = useMemo(
+    () => ({
+      css: toCSS(config),
+      tailwind: toTailwind(config),
+      tokens: toTokens(config),
+    }),
+    [config],
+  );
 
   // Skip the mount-time run: config is already correct (from the URL or the
   // untouched default) via the lazy initializer above, so re-encoding and
@@ -60,6 +70,11 @@ function EditorPageInner() {
     <div className="flex min-h-screen flex-col gap-6 p-6 md:flex-row">
       <ControlsPanel config={config} dispatch={dispatch} />
       <ScalePreview steps={steps} />
+      <ExportSheet
+        css={exportOutputs.css}
+        tailwind={exportOutputs.tailwind}
+        tokens={exportOutputs.tokens}
+      />
     </div>
   );
 }
