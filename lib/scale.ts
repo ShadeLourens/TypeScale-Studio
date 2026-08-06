@@ -1,5 +1,21 @@
 // ── The single source of truth (spec.md §2) ─────────────────────────────
 
+// Hoisted to const arrays (rather than inlined into the interfaces below) so
+// lib/url-state.ts can import these exact value sets for its runtime
+// validator instead of hand-copying them — one source of truth, no drift risk
+// if a value is ever added or removed here.
+export const ROUNDING_VALUES = [
+  "none",
+  "nearest-px",
+  "nearest-quarter-rem",
+] as const;
+export const THEME_VALUES = ["light", "dark"] as const;
+export const FONT_FALLBACK_VALUES = [
+  "sans-serif",
+  "serif",
+  "monospace",
+] as const;
+
 export interface ScaleConfig {
   /** Schema version — lets you migrate old saved configs later */
   version: 1;
@@ -14,7 +30,7 @@ export interface ScaleConfig {
     /** Steps below base (small, caption) */
     stepsDown: number; // default 2, max 3
     /** Rounding for computed sizes */
-    rounding: "none" | "nearest-px" | "nearest-quarter-rem";
+    rounding: (typeof ROUNDING_VALUES)[number];
   };
 
   fonts: {
@@ -29,7 +45,7 @@ export interface ScaleConfig {
    */
   overrides: Record<string, StepOverride>;
 
-  theme: "light" | "dark";
+  theme: (typeof THEME_VALUES)[number];
 }
 
 export interface FontChoice {
@@ -37,7 +53,7 @@ export interface FontChoice {
   family: string;
   /** Weights actually loaded — keep to what's used */
   weights: number[]; // e.g. [400, 600]
-  fallback: "sans-serif" | "serif" | "monospace";
+  fallback: (typeof FONT_FALLBACK_VALUES)[number];
 }
 
 export interface StepOverride {
@@ -78,7 +94,7 @@ function roundTo(value: number, decimals: number): number {
  */
 function applyRounding(
   rawPx: number,
-  rounding: ScaleConfig["base"]["rounding"]
+  rounding: ScaleConfig["base"]["rounding"],
 ): { fontSizePx: number; fontSizeRem: number } {
   switch (rounding) {
     case "nearest-px": {
