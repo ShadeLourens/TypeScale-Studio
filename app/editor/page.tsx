@@ -6,9 +6,12 @@ import { editorReducer, initialEditorConfig } from "@/lib/editor-reducer";
 import { resolveScale, type ScaleConfig } from "@/lib/scale";
 import { decodeConfig, encodeConfig } from "@/lib/url-state";
 import { toCSS, toTailwind, toTokens } from "@/lib/exports";
+import { saveScale } from "@/lib/actions/scales";
+import { SAVE_STASH_KEY, parsePendingSave } from "@/lib/save-stash";
 import { ControlsPanel } from "@/components/editor/ControlsPanel";
 import { ScalePreview } from "@/components/editor/ScalePreview";
 import { ExportSheet } from "@/components/editor/ExportSheet";
+import { SaveButton } from "@/components/editor/SaveButton";
 
 const URL_PARAM = "c";
 const URL_SYNC_DEBOUNCE_MS = 300;
@@ -66,6 +69,31 @@ function EditorPageInner() {
     return () => clearTimeout(timeoutId);
   }, [config, pathname, router]);
 
+  // Restores a config stashed (by SaveButton) before a login redirect, then
+  // immediately retries the save now that the user is authenticated.
+  //
+  // This dispatches loadConfig on mount, which also re-triggers the
+  // URL-sync effect above (isFirstEffectRun only skips its very first run,
+  // not this one) — a router.replace(...?c=...) gets scheduled ~300ms out
+  // at the same time this effect's saveScale call is in flight. Deliberately
+  // not suppressed: on success, saveScale (a single DB insert) reliably
+  // resolves before 300ms and router.push('/s/[slug]') unmounts this page
+  // first, so the pending replace's cleanup cancels it before it fires — on
+  // the rare slow-connection case where the timer wins, the worst outcome is
+  // one harmless replace immediately followed by the push. On failure, no
+  // navigation happens, so letting the URL-sync effect fire is actually
+  // correct — it keeps the URL in sync with the restored config so a refresh
+  // doesn't lose it.
+  useEffect(() => {
+    const stashed = parsePendingSave(sessionStorage.getItem(SAVE_STASH_KEY));
+    if (!stashed) return;
+    sessionStorage.removeItem(SAVE_STASH_KEY);
+    dispatch({ type: "loadConfig", config: stashed });
+    void saveScale(stashed).then((result) => {
+      if (result.ok) router.push(`/s/${result.slug}`);
+    });
+  }, [router]);
+
   return (
     <div className="flex min-h-screen flex-col gap-6 p-6 md:flex-row">
       <ControlsPanel config={config} dispatch={dispatch} />
@@ -75,6 +103,7 @@ function EditorPageInner() {
         tailwind={exportOutputs.tailwind}
         tokens={exportOutputs.tokens}
       />
+      <SaveButton config={config} />
     </div>
   );
 }

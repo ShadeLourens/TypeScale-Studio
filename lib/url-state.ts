@@ -65,8 +65,11 @@ function isOverridesRecord(
 
 /** Top-level check: is this unknown value actually a valid ScaleConfig?
  * Walks the same shape as the ScaleConfig interface in scale.ts, field by
- * field — keep the two in sync if that interface ever changes. */
-function isScaleConfig(value: unknown): value is ScaleConfig {
+ * field — keep the two in sync if that interface ever changes. Exported
+ * because it's reused wherever untrusted data claims to be a ScaleConfig,
+ * not just URL params: the saveScale Server Action (a public POST endpoint)
+ * and a defensive re-check on jsonb rows read back from the database. */
+export function isScaleConfig(value: unknown): value is ScaleConfig {
   if (!isPlainObject(value)) return false;
   if (value.version !== 1) return false; // only version supported today, no migration path yet
 

@@ -80,6 +80,17 @@ describe("editorReducer", () => {
     });
   });
 
+  it("loadConfig replaces the entire state, not just some fields", () => {
+    const otherConfig = editorReducer(initialEditorConfig, {
+      type: "setStepOverride",
+      step: 3,
+      override: { weight: 700 },
+    });
+    const loaded = editorReducer(initialEditorConfig, { type: "loadConfig", config: otherConfig });
+    expect(loaded).toEqual(otherConfig);
+    expect(loaded).not.toBe(initialEditorConfig);
+  });
+
   it("returns the same object reference for an unrecognized action", () => {
     const unknownAction = { type: "noSuchAction" } as unknown as EditorAction;
     expect(editorReducer(initialEditorConfig, unknownAction)).toBe(initialEditorConfig);
