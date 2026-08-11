@@ -1,4 +1,5 @@
 import type { ResolvedStep } from "@/lib/scale";
+import { FONT_CSS_VARS } from "@/lib/fonts";
 
 export interface ScalePreviewProps {
   steps: ResolvedStep[];
@@ -32,8 +33,12 @@ export function ScalePreview({ steps, readOnly = false }: ScalePreviewProps) {
             // resolveScale() at runtime, and Tailwind can only generate
             // classes for strings it sees at build time.
             style={{
+              fontFamily: `${FONT_CSS_VARS[s.family]}, ${s.fallback}`,
               fontSize: `${s.fontSizePx}px`,
               fontWeight: s.weight,
+              // Playfair Display's only loaded instances are italic (see
+              // lib/fonts.ts) — there's no upright style to fall back to.
+              fontStyle: s.family === "Playfair Display" ? "italic" : "normal",
               lineHeight: s.lineHeight,
               letterSpacing: `${s.letterSpacing}em`,
             }}

@@ -56,12 +56,45 @@ describe("resolveScale", () => {
     expect(result.every((r) => r.weight === 400)).toBe(true);
   });
 
+  // Steps above base are heading territory (h1-h6); base and everything
+  // below it is body-sized text (paragraph copy, captions) — see the
+  // comment in resolveScale for why this is the one place that rule lives.
+  it("assigns the heading font above base and the body font at/below base", () => {
+    const config = makeConfig({
+      fonts: {
+        heading: {
+          family: "Playfair Display",
+          weights: [600],
+          fallback: "serif",
+        },
+        body: { family: "Roboto", weights: [400], fallback: "sans-serif" },
+      },
+    });
+    const result = resolveScale(config);
+
+    for (const step of result) {
+      if (step.step > 0) {
+        expect(step.family).toBe("Playfair Display");
+        expect(step.fallback).toBe("serif");
+      } else {
+        expect(step.family).toBe("Roboto");
+        expect(step.fallback).toBe("sans-serif");
+      }
+    }
+  });
+
   // config.base.rounding controls the stored/exported value, not UI display formatting
   // (components format to 1 decimal on top of this regardless of mode — see scale.ts).
   describe("rounding modes", () => {
     it("'none' avoids float artifacts but keeps the unrounded scale", () => {
       const config = makeConfig({
-        base: { fontSize: 16, ratio: 1.2, stepsUp: 3, stepsDown: 0, rounding: "none" },
+        base: {
+          fontSize: 16,
+          ratio: 1.2,
+          stepsUp: 3,
+          stepsDown: 0,
+          rounding: "none",
+        },
       });
       const result = resolveScale(config);
       const step3 = result.find((r) => r.step === 3)!;
@@ -72,7 +105,13 @@ describe("resolveScale", () => {
 
     it("'nearest-px' rounds the px value to a whole number", () => {
       const config = makeConfig({
-        base: { fontSize: 16, ratio: 1.25, stepsUp: 2, stepsDown: 0, rounding: "nearest-px" },
+        base: {
+          fontSize: 16,
+          ratio: 1.25,
+          stepsUp: 2,
+          stepsDown: 0,
+          rounding: "nearest-px",
+        },
       });
       const result = resolveScale(config);
       const step1 = result.find((r) => r.step === 1)!; // 20px exactly
@@ -84,12 +123,24 @@ describe("resolveScale", () => {
 
     it("'nearest-quarter-rem' rounds the rem value to the nearest 0.25", () => {
       const config = makeConfig({
-        base: { fontSize: 16, ratio: 1.1, stepsUp: 3, stepsDown: 0, rounding: "nearest-quarter-rem" },
+        base: {
+          fontSize: 16,
+          ratio: 1.1,
+          stepsUp: 3,
+          stepsDown: 0,
+          rounding: "nearest-quarter-rem",
+        },
       });
       const result = resolveScale(config);
       for (const stepResult of result) {
-        expect(stepResult.fontSizeRem * 4).toBeCloseTo(Math.round(stepResult.fontSizeRem * 4), 10);
-        expect(stepResult.fontSizePx).toBeCloseTo(stepResult.fontSizeRem * 16, 10);
+        expect(stepResult.fontSizeRem * 4).toBeCloseTo(
+          Math.round(stepResult.fontSizeRem * 4),
+          10,
+        );
+        expect(stepResult.fontSizePx).toBeCloseTo(
+          stepResult.fontSizeRem * 16,
+          10,
+        );
       }
     });
   });
@@ -101,7 +152,12 @@ describe("resolveScale", () => {
     it("applies weight, lineHeight, letterSpacing, and label only to the targeted step", () => {
       const config = makeConfig({
         overrides: {
-          "3": { weight: 700, lineHeight: 1.1, letterSpacing: -0.02, label: "Display" },
+          "3": {
+            weight: 700,
+            lineHeight: 1.1,
+            letterSpacing: -0.02,
+            label: "Display",
+          },
         },
       });
       const result = resolveScale(config);
@@ -130,8 +186,30 @@ describe("resolveScale", () => {
 
     it("survives a ratio change — the core reason overrides are stored as deltas", () => {
       const overrides = { "3": { weight: 700 } };
-      const before = resolveScale(makeConfig({ overrides, base: { fontSize: 16, ratio: 1.25, stepsUp: 5, stepsDown: 2, rounding: "none" } }));
-      const after = resolveScale(makeConfig({ overrides, base: { fontSize: 16, ratio: 1.333, stepsUp: 5, stepsDown: 2, rounding: "none" } }));
+      const before = resolveScale(
+        makeConfig({
+          overrides,
+          base: {
+            fontSize: 16,
+            ratio: 1.25,
+            stepsUp: 5,
+            stepsDown: 2,
+            rounding: "none",
+          },
+        }),
+      );
+      const after = resolveScale(
+        makeConfig({
+          overrides,
+          base: {
+            fontSize: 16,
+            ratio: 1.333,
+            stepsUp: 5,
+            stepsDown: 2,
+            rounding: "none",
+          },
+        }),
+      );
 
       const beforeStep3 = before.find((r) => r.step === 3)!;
       const afterStep3 = after.find((r) => r.step === 3)!;

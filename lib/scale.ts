@@ -16,6 +16,34 @@ export const FONT_FALLBACK_VALUES = [
   "monospace",
 ] as const;
 
+// The five self-hosted families available in the picker (see lib/fonts.ts
+// for the actual font files/CSS variables). Closed union, not a plain
+// string, so an unknown family can never survive decodeConfig/isScaleConfig.
+export const CURATED_FONT_FAMILIES = [
+  "Inter",
+  "Roboto",
+  "Open Sans",
+  "Montserrat",
+  "Playfair Display",
+] as const;
+export type CuratedFontFamily = (typeof CURATED_FONT_FAMILIES)[number];
+
+// Per-family metadata the picker and font loaders both need — one source so
+// they can't drift apart. Playfair Display's only loaded instances are
+// italic (see assets/fonts/playfair-display/), so consumers that render text
+// key off `family === "Playfair Display"` for fontStyle rather than this map
+// carrying a style field only one family would ever use.
+export const FONT_META: Record<
+  CuratedFontFamily,
+  { fallback: (typeof FONT_FALLBACK_VALUES)[number]; weights: number[] }
+> = {
+  Inter: { fallback: "sans-serif", weights: [400, 600] },
+  Roboto: { fallback: "sans-serif", weights: [400, 600] },
+  "Open Sans": { fallback: "sans-serif", weights: [400, 600] },
+  Montserrat: { fallback: "sans-serif", weights: [400, 600] },
+  "Playfair Display": { fallback: "serif", weights: [400, 600] },
+};
+
 export interface ScaleConfig {
   /** Schema version — lets you migrate old saved configs later */
   version: 1;
@@ -49,8 +77,8 @@ export interface ScaleConfig {
 }
 
 export interface FontChoice {
-  /** Google Fonts family name, e.g. "Inter" */
-  family: string;
+  /** One of the curated, self-hosted families — see CURATED_FONT_FAMILIES. */
+  family: CuratedFontFamily;
   /** Weights actually loaded — keep to what's used */
   weights: number[]; // e.g. [400, 600]
   fallback: (typeof FONT_FALLBACK_VALUES)[number];
@@ -74,6 +102,9 @@ export interface ResolvedStep {
   weight: number;
   lineHeight: number;
   letterSpacing: number;
+  /** Which curated family this step renders in — see the heading/body split in resolveScale(). */
+  family: CuratedFontFamily;
+  fallback: (typeof FONT_FALLBACK_VALUES)[number];
 }
 
 /** Standard browser root font-size, used to convert px to rem regardless of scale base. */
@@ -160,6 +191,10 @@ export function resolveScale(config: ScaleConfig): ResolvedStep[] {
     const rawPx = fontSize * ratio ** step;
     const { fontSizePx, fontSizeRem } = applyRounding(rawPx, rounding);
     const override = config.overrides[String(step)];
+    // step 0 ("Base") and everything below it is body-sized text (paragraph
+    // copy, captions); only steps above base are heading territory (h1-h6).
+    // This is the one place that rule lives — nothing downstream re-derives it.
+    const role = step > 0 ? config.fonts.heading : config.fonts.body;
 
     steps.push({
       step,
@@ -169,6 +204,8 @@ export function resolveScale(config: ScaleConfig): ResolvedStep[] {
       weight: override?.weight ?? defaultWeight(),
       lineHeight: override?.lineHeight ?? defaultLineHeight(step),
       letterSpacing: override?.letterSpacing ?? defaultLetterSpacing(step),
+      family: role.family,
+      fallback: role.fallback,
     });
   }
 
