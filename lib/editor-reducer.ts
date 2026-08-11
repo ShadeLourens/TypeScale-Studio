@@ -9,7 +9,8 @@ export type EditorAction =
   | { type: "setFont"; role: "heading" | "body"; font: FontChoice }
   | { type: "setStepOverride"; step: number; override: StepOverride }
   | { type: "clearStepOverride"; step: number }
-  | { type: "setTheme"; theme: ScaleConfig["theme"] };
+  | { type: "setTheme"; theme: ScaleConfig["theme"] }
+  | { type: "loadConfig"; config: ScaleConfig };
 
 export const initialEditorConfig: ScaleConfig = {
   version: 1,
@@ -52,6 +53,10 @@ export function editorReducer(state: ScaleConfig, action: EditorAction): ScaleCo
     }
     case "setTheme":
       return { ...state, theme: action.theme };
+    case "loadConfig":
+      // Bulk-replaces state wholesale — used to restore a config stashed in
+      // sessionStorage before a login redirect (see lib/save-stash.ts).
+      return action.config;
     default:
       return state;
   }
