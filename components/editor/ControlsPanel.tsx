@@ -2,7 +2,13 @@
 
 import { useState, type Dispatch } from "react";
 import type { EditorAction } from "@/lib/editor-reducer";
-import type { ScaleConfig } from "@/lib/scale";
+import {
+  CURATED_FONT_FAMILIES,
+  FONT_META,
+  type CuratedFontFamily,
+  type ScaleConfig,
+} from "@/lib/scale";
+import { FONT_CSS_VARS } from "@/lib/fonts";
 
 export interface ControlsPanelProps {
   config: ScaleConfig;
@@ -106,6 +112,56 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
           <option value="none">None</option>
           <option value="nearest-px">Nearest px</option>
           <option value="nearest-quarter-rem">Nearest quarter rem</option>
+        </select>
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm">
+        Heading font
+        <select
+          value={config.fonts.heading.family}
+          onChange={(e) => {
+            const family = e.target.value as CuratedFontFamily;
+            dispatch({
+              type: "setFont",
+              role: "heading",
+              font: { family, ...FONT_META[family] },
+            });
+          }}
+        >
+          {CURATED_FONT_FAMILIES.map((family) => (
+            <option
+              key={family}
+              value={family}
+              style={{ fontFamily: FONT_CSS_VARS[family] }}
+            >
+              {family}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm">
+        Body font
+        <select
+          value={config.fonts.body.family}
+          onChange={(e) => {
+            const family = e.target.value as CuratedFontFamily;
+            dispatch({
+              type: "setFont",
+              role: "body",
+              font: { family, ...FONT_META[family] },
+            });
+          }}
+        >
+          {CURATED_FONT_FAMILIES.map((family) => (
+            <option
+              key={family}
+              value={family}
+              style={{ fontFamily: FONT_CSS_VARS[family] }}
+            >
+              {family}
+            </option>
+          ))}
         </select>
       </label>
 

@@ -29,7 +29,11 @@ describe("url-state", () => {
           rounding: "nearest-quarter-rem",
         },
         fonts: {
-          heading: { family: "Lora", weights: [500, 700], fallback: "serif" },
+          heading: {
+            family: "Playfair Display",
+            weights: [500, 700],
+            fallback: "serif",
+          },
           body: { family: "Inter", weights: [400], fallback: "sans-serif" },
         },
         overrides: {
@@ -82,6 +86,22 @@ describe("url-state", () => {
     it("invalid literal union value: theme", () => {
       const encoded = compressToEncodedURIComponent(
         JSON.stringify({ ...initialEditorConfig, theme: "purple" }),
+      );
+      expect(decodeConfig(encoded)).toBeNull();
+    });
+
+    it("invalid literal union value: fonts.heading.family (not one of the curated five)", () => {
+      const encoded = compressToEncodedURIComponent(
+        JSON.stringify({
+          ...initialEditorConfig,
+          fonts: {
+            ...initialEditorConfig.fonts,
+            heading: {
+              ...initialEditorConfig.fonts.heading,
+              family: "Comic Sans MS",
+            },
+          },
+        }),
       );
       expect(decodeConfig(encoded)).toBeNull();
     });

@@ -2,7 +2,12 @@ import {
   compressToEncodedURIComponent,
   decompressFromEncodedURIComponent,
 } from "lz-string";
-import { FONT_FALLBACK_VALUES, ROUNDING_VALUES, THEME_VALUES } from "./scale";
+import {
+  CURATED_FONT_FAMILIES,
+  FONT_FALLBACK_VALUES,
+  ROUNDING_VALUES,
+  THEME_VALUES,
+} from "./scale";
 import type { FontChoice, ScaleConfig, StepOverride } from "./scale";
 
 // This file has one job: turn a ScaleConfig into a URL-safe string and back.
@@ -35,7 +40,7 @@ function isOneOf<T extends string>(
 /** Validates one FontChoice (config.fonts.heading or .body). */
 function isFontChoice(value: unknown): value is FontChoice {
   if (!isPlainObject(value)) return false;
-  if (typeof value.family !== "string") return false;
+  if (!isOneOf(value.family, CURATED_FONT_FAMILIES)) return false;
   if (!Array.isArray(value.weights) || !value.weights.every(isFiniteNumber))
     return false;
   return isOneOf(value.fallback, FONT_FALLBACK_VALUES);
