@@ -97,7 +97,7 @@ function EditorPageInner() {
   return (
     <div className="flex min-h-screen flex-col gap-6 p-6 md:flex-row">
       <ControlsPanel config={config} dispatch={dispatch} />
-      <ScalePreview steps={steps} />
+      <ScalePreview steps={steps} theme={config.theme} />
       <ExportSheet
         css={exportOutputs.css}
         tailwind={exportOutputs.tailwind}

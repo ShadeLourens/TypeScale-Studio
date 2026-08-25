@@ -22,19 +22,23 @@ export default async function DashboardPage() {
         // Distinct from the empty state below: this is a fetch failure, not
         // "you have zero scales" — collapsing the two would tell a user with
         // saved scales that they have none, with a cheery CTA to start over.
-        <div className="flex flex-col items-start gap-3 rounded border border-dashed border-red-300 p-8">
+        // Plain `surface`, not a red-tinted border on top of it — mixing the
+        // utility's own border-color with a red override risks a Tailwind
+        // cascade conflict (which class wins depends on generation order,
+        // not source order); the red text alone already signals the error.
+        <div className="surface flex flex-col items-start gap-3 p-8">
           <p className="text-sm text-red-600">
             Couldn&apos;t load your scales — try refreshing.
           </p>
         </div>
       ) : scales.length === 0 ? (
-        <div className="flex flex-col items-start gap-3 rounded border border-dashed border-gray-300 p-8">
-          <p className="text-sm text-gray-600">
+        <div className="surface flex flex-col items-start gap-3 p-8">
+          <p className="text-sm text-muted-foreground">
             No scales yet — start with a classic Major Third.
           </p>
           <Link
             href="/editor"
-            className="rounded border border-gray-900 px-3 py-1.5 text-sm font-semibold"
+            className="rounded-sm border border-accent px-3 py-1.5 text-sm font-semibold transition-colors hover:bg-accent/10"
           >
             Open the editor
           </Link>
@@ -42,7 +46,7 @@ export default async function DashboardPage() {
       ) : (
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-200 text-left text-xs text-gray-500">
+            <tr className="border-b border-border text-left text-xs text-muted-foreground">
               <th className="py-2 font-normal">Name</th>
               <th className="py-2 font-normal">Last edited</th>
               <th className="py-2 font-normal">Actions</th>

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { getScaleBySlug } from "@/lib/scales-query";
 import { resolveScale, type CuratedFontFamily } from "@/lib/scale";
+import { THEME_COLORS } from "@/lib/theme-colors";
 
 export const alt = "Type scale preview";
 export const size = { width: 1200, height: 630 };
@@ -144,6 +145,7 @@ export default async function Image({ params }: ImageProps) {
   const families = [
     ...new Set([...sample.map((s) => s.family), scale.config.fonts.body.family]),
   ];
+  const colors = THEME_COLORS[scale.config.theme];
 
   // A missing/corrupt font file on disk should degrade to next/og's built-in
   // fallback font, never break the image route — this route always returns
@@ -162,7 +164,7 @@ export default async function Image({ params }: ImageProps) {
         flexDirection: "column",
         width: "100%",
         height: "100%",
-        backgroundColor: "#ffffff",
+        backgroundColor: colors.background,
         padding: "64px",
         justifyContent: "space-between",
       }}
@@ -178,7 +180,7 @@ export default async function Image({ params }: ImageProps) {
               fontWeight: nearestLoadedWeight(step.weight),
               fontStyle: step.family === "Playfair Display" ? "italic" : "normal",
               lineHeight: 1,
-              color: "#111827",
+              color: colors.foreground,
               marginTop: "8px",
             }}
           >
@@ -196,7 +198,7 @@ export default async function Image({ params }: ImageProps) {
               : "normal",
           fontWeight: 400, // explicit — an unset weight risks the same unmatched-font fallback nearestLoadedWeight guards against above
           fontSize: 28,
-          color: "#6b7280",
+          color: colors.muted,
         }}
       >
         {`${scale.config.base.ratio}× ratio · ${scale.config.base.fontSize}px base · ${steps.length} steps · TypeScale Studio`}

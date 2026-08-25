@@ -35,15 +35,22 @@ function LoginPageInner() {
   if (status === "sent") {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-2 p-6 text-center">
-        <p className="text-lg font-semibold">Check your email</p>
-        <p className="text-sm text-gray-600">We sent a sign-in link to {email}.</p>
+        <div className="surface flex flex-col items-center gap-2 p-8">
+          <p className="text-lg font-semibold">Check your email</p>
+          <p className="text-sm text-muted-foreground">
+            We sent a sign-in link to {email}.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6">
-      <form onSubmit={handleSubmit} className="flex w-full max-w-xs flex-col gap-3">
+      <form
+        onSubmit={handleSubmit}
+        className="surface flex w-full max-w-xs flex-col gap-3 p-4"
+      >
         <label className="flex flex-col gap-1 text-sm">
           Email
           <input
@@ -51,13 +58,13 @@ function LoginPageInner() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="rounded border border-gray-300 px-3 py-1.5"
+            className="rounded-sm border border-border bg-surface/60 px-3 py-1.5 transition-colors focus-visible:border-accent"
           />
         </label>
         <button
           type="submit"
           disabled={status === "sending"}
-          className="rounded border border-gray-900 px-3 py-1.5 text-sm font-semibold"
+          className="rounded-sm border border-accent px-3 py-1.5 text-sm font-semibold transition-colors hover:bg-accent/10"
         >
           {status === "sending" ? "Sending…" : "Send sign-in link"}
         </button>

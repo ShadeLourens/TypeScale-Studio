@@ -5,6 +5,7 @@ import type { EditorAction } from "@/lib/editor-reducer";
 import {
   CURATED_FONT_FAMILIES,
   FONT_META,
+  THEME_VALUES,
   type CuratedFontFamily,
   type ScaleConfig,
 } from "@/lib/scale";
@@ -16,6 +17,12 @@ export interface ControlsPanelProps {
   // page stays the single source of truth (see app/editor/page.tsx).
   dispatch: Dispatch<EditorAction>;
 }
+
+// Flatter "recessed" treatment, not the full glass `surface` utility — the
+// panel container below already goes full glass; stacking glass-on-glass on
+// every tiny control reads busy (see the milestone-6 plan's Phase B notes).
+const FIELD_CLASS =
+  "rounded-sm border border-border bg-surface/60 px-2.5 py-1.5 text-sm transition-colors focus-visible:border-accent";
 
 // "use client" (top of file) because of the useState below — unlike
 // ScalePreview, this component is editor-only and has no future server-render
@@ -37,7 +44,7 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
 
   return (
     <form
-      className="flex w-full max-w-xs flex-col gap-4"
+      className="surface flex w-full max-w-xs flex-col gap-4 p-4"
       onSubmit={(e) => e.preventDefault()}
     >
       <label className="flex flex-col gap-1 text-sm">
@@ -53,6 +60,7 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
               fontSize: Number(e.target.value),
             })
           }
+          className={FIELD_CLASS}
         />
       </label>
 
@@ -66,6 +74,7 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
           onChange={(e) =>
             dispatch({ type: "setRatio", ratio: Number(e.target.value) })
           }
+          className={FIELD_CLASS}
         />
       </label>
 
@@ -79,6 +88,7 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
           onChange={(e) =>
             dispatch({ type: "setStepsUp", stepsUp: Number(e.target.value) })
           }
+          className={FIELD_CLASS}
         />
       </label>
 
@@ -95,6 +105,7 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
               stepsDown: Number(e.target.value),
             })
           }
+          className={FIELD_CLASS}
         />
       </label>
 
@@ -108,10 +119,31 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
               rounding: e.target.value as ScaleConfig["base"]["rounding"],
             })
           }
+          className={FIELD_CLASS}
         >
           <option value="none">None</option>
           <option value="nearest-px">Nearest px</option>
           <option value="nearest-quarter-rem">Nearest quarter rem</option>
+        </select>
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm">
+        Scale theme
+        <select
+          value={config.theme}
+          onChange={(e) =>
+            dispatch({
+              type: "setTheme",
+              theme: e.target.value as ScaleConfig["theme"],
+            })
+          }
+          className={FIELD_CLASS}
+        >
+          {THEME_VALUES.map((theme) => (
+            <option key={theme} value={theme}>
+              {theme === "light" ? "Light" : "Dark"}
+            </option>
+          ))}
         </select>
       </label>
 
@@ -127,6 +159,7 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
               font: { family, ...FONT_META[family] },
             });
           }}
+          className={FIELD_CLASS}
         >
           {CURATED_FONT_FAMILIES.map((family) => (
             <option
@@ -152,6 +185,7 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
               font: { family, ...FONT_META[family] },
             });
           }}
+          className={FIELD_CLASS}
         >
           {CURATED_FONT_FAMILIES.map((family) => (
             <option
@@ -165,13 +199,14 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
         </select>
       </label>
 
-      <hr className="border-gray-200" />
+      <hr className="border-border" />
 
       <label className="flex flex-col gap-1 text-sm">
         Step to override
         <select
           value={selectedStep}
           onChange={(e) => setSelectedStep(Number(e.target.value))}
+          className={FIELD_CLASS}
         >
           {stepOptions.map((step) => (
             <option key={step} value={step}>
@@ -197,6 +232,7 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
               override: { label: e.target.value },
             })
           }
+          className={FIELD_CLASS}
         />
       </label>
 
@@ -212,6 +248,7 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
               override: { weight: Number(e.target.value) },
             })
           }
+          className={FIELD_CLASS}
         />
       </label>
 
@@ -228,6 +265,7 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
               override: { lineHeight: Number(e.target.value) },
             })
           }
+          className={FIELD_CLASS}
         />
       </label>
 
@@ -244,6 +282,7 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
               override: { letterSpacing: Number(e.target.value) },
             })
           }
+          className={FIELD_CLASS}
         />
       </label>
 
@@ -252,7 +291,7 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
         onClick={() =>
           dispatch({ type: "clearStepOverride", step: selectedStep })
         }
-        className="rounded border border-gray-300 px-3 py-1.5 text-sm"
+        className="rounded-sm border border-border px-3 py-1.5 text-sm transition-colors hover:border-accent"
       >
         Clear override
       </button>
