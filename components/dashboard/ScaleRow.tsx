@@ -22,6 +22,13 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
+// Flat buttons, not glass — the row itself stays a plain table row too (a
+// translucent/blurred <tr> fights native table rendering, per the
+// milestone-6 plan). transition-colors + hover:border-accent is this
+// component's share of the motion pass.
+const BTN_CLASS =
+  "rounded-sm border border-border px-2 py-1 transition-colors hover:border-accent";
+
 export function ScaleRow({ scale }: ScaleRowProps) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("idle");
@@ -87,11 +94,12 @@ export function ScaleRow({ scale }: ScaleRowProps) {
   }
 
   return (
-    <tr className="border-b border-gray-100">
+    <tr className="motion-safe:animate-fade-in border-b border-border">
       <td className="py-2">
         {mode === "renaming" ? (
           <input
             autoFocus
+            aria-label="Rename scale"
             value={nameDraft}
             onChange={(e) => setNameDraft(e.target.value)}
             onKeyDown={(e) => {
@@ -101,27 +109,20 @@ export function ScaleRow({ scale }: ScaleRowProps) {
                 setMode("idle");
               }
             }}
-            className="rounded border border-gray-300 px-2 py-1"
+            className="rounded-sm border border-border bg-surface/60 px-2 py-1 transition-colors focus-visible:border-accent"
           />
         ) : (
           scale.name
         )}
       </td>
-      <td className="py-2 text-gray-500">
+      <td className="py-2 text-muted-foreground">
         {DATE_FORMATTER.format(new Date(scale.updatedAt))}
       </td>
       <td className="flex flex-wrap gap-2 py-2">
-        <Link
-          href={`/s/${scale.slug}`}
-          className="rounded border border-gray-300 px-2 py-1"
-        >
+        <Link href={`/s/${scale.slug}`} className={BTN_CLASS}>
           Open
         </Link>
-        <button
-          type="button"
-          onClick={handleCopyLink}
-          className="rounded border border-gray-300 px-2 py-1"
-        >
+        <button type="button" onClick={handleCopyLink} className={BTN_CLASS}>
           {copyState === "copied"
             ? "Copied!"
             : copyState === "failed"
@@ -133,7 +134,7 @@ export function ScaleRow({ scale }: ScaleRowProps) {
             type="button"
             onClick={handleRenameSubmit}
             disabled={isPending}
-            className="rounded border border-gray-300 px-2 py-1"
+            className={BTN_CLASS}
           >
             {isPending ? "Saving…" : "Save"}
           </button>
@@ -141,19 +142,21 @@ export function ScaleRow({ scale }: ScaleRowProps) {
           <button
             type="button"
             onClick={() => setMode("renaming")}
-            className="rounded border border-gray-300 px-2 py-1"
+            className={BTN_CLASS}
           >
             Rename
           </button>
         )}
         {mode === "deleting" ? (
           <>
-            <span className="text-xs text-gray-600">Delete this scale?</span>
+            <span className="text-xs text-muted-foreground">
+              Delete this scale?
+            </span>
             <button
               type="button"
               onClick={handleDelete}
               disabled={isPending}
-              className="rounded border border-red-600 px-2 py-1 text-red-600"
+              className="rounded-sm border border-red-600 px-2 py-1 text-red-600 transition-colors hover:bg-red-600/10"
             >
               {isPending ? "Deleting…" : "Confirm"}
             </button>
@@ -161,7 +164,7 @@ export function ScaleRow({ scale }: ScaleRowProps) {
               type="button"
               onClick={() => setMode("idle")}
               disabled={isPending}
-              className="rounded border border-gray-300 px-2 py-1"
+              className={BTN_CLASS}
             >
               Cancel
             </button>
@@ -170,7 +173,7 @@ export function ScaleRow({ scale }: ScaleRowProps) {
           <button
             type="button"
             onClick={() => setMode("deleting")}
-            className="rounded border border-gray-300 px-2 py-1"
+            className={BTN_CLASS}
           >
             Delete
           </button>

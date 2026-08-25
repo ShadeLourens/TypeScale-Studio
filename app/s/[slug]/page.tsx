@@ -36,12 +36,16 @@ export default async function SharedScalePage({ params }: PageProps) {
         <h1 className="text-lg font-semibold">{scale.name}</h1>
         <Link
           href={`/editor?c=${encodeConfig(scale.config)}`}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm"
+          className="rounded-sm border border-border px-3 py-1.5 text-sm transition-colors hover:border-accent"
         >
           Open in editor
         </Link>
       </div>
-      <ScalePreview steps={resolveScale(scale.config)} readOnly />
+      <ScalePreview
+        steps={resolveScale(scale.config)}
+        theme={scale.config.theme}
+        readOnly
+      />
     </div>
   );
 }

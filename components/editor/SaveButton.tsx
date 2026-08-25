@@ -41,7 +41,7 @@ export function SaveButton({ config }: SaveButtonProps) {
       type="button"
       onClick={handleSave}
       disabled={status === "saving"}
-      className="rounded border border-gray-300 px-3 py-1.5 text-sm"
+      className="rounded-sm border border-border px-3 py-1.5 text-sm transition-colors hover:border-accent"
     >
       {status === "saving" ? "Saving…" : status === "error" ? "Save failed — retry" : "Save scale"}
     </button>

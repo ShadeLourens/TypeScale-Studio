@@ -1,24 +1,178 @@
 @import "tailwindcss";
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
+/* Hex values here must be kept in sync by hand with lib/theme-colors.ts —
+   CSS can't import from TS, so this comment is the one manual seam. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Light — a parity palette derived to match the dark system below (the
+     source reference is dark-only). --background reuses the reference's own
+     generated accent-100 ramp step, so it isn't an arbitrary off-white. */
+  --background: #f5f4ff;
+  --foreground: #1e1c29;
+  --surface: #fdfcff;
+  --surface-translucent: color-mix(in oklab, var(--surface) 55%, transparent);
+  --muted-foreground: #6b6f85;
+  --accent: #9184d9;
+  --accent-strong: #5d5294; /* deep ramp step — body-sized/text use of the accent needs this, not --accent itself, for contrast */
+  --border: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  /* Elevation as an edge plus ambient darkness, not a soft stacked drop
+     shadow — Direction A's heavy blur/transparency already supplies the
+     "glass" read on its own. */
+  --shadow-glass:
+    0 0 0 1px color-mix(in oklab, var(--foreground) 8%, transparent) inset,
+    0 16px 40px -18px rgba(30, 28, 41, 0.18);
+  /* Ambient background blobs (see components/layout/AmbientBackground.tsx) —
+     without these, `surface`'s backdrop-filter has nothing textured behind
+     it to actually blur, so glass panels read as flat translucent boxes
+     instead of glass. Toned down from the dark values below — the
+     reference this came from is dark-only, and the same alphas would
+     overpower a near-white page. Hues (blue-violet, sky-blue, magenta)
+     stay in the accent's family — no yellow/green, per the agreed palette. */
+  --blob-1: rgba(122, 108, 255, 0.22);
+  --blob-2: rgba(87, 180, 255, 0.16);
+  --blob-3: rgba(232, 121, 249, 0.12);
+}
+
+[data-theme="dark"] {
+  --background: #161826;
+  --foreground: #e9e9ed;
+  --surface: #232532;
+  --surface-translucent: color-mix(in oklab, var(--surface) 42%, transparent);
+  --muted-foreground: #9397ab;
+  --accent: #9184d9;
+  --accent-strong: #b5abfc; /* lighter ramp step for dark-on-dark emphasis */
+  --border: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --shadow-glass:
+    0 0 0 1px color-mix(in oklab, var(--foreground) 6%, transparent) inset,
+    0 20px 46px -18px rgba(0, 0, 0, 0.55);
+  /* Exact alphas from the reference — this is the mode it was designed for. */
+  --blob-1: rgba(122, 108, 255, 0.55);
+  --blob-2: rgba(87, 180, 255, 0.35);
+  --blob-3: rgba(232, 121, 249, 0.28);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-translucent: var(--surface-translucent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-border: var(--border);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --font-sans: var(--font-inter);
+  /* Registers the `animate-fade-in` utility — used with Tailwind's built-in
+     `motion-safe:` variant so it's a no-op under prefers-reduced-motion
+     without any extra media-query plumbing. */
+  --animate-fade-in: fade-in 240ms ease-out both;
+  /* Same pattern for the three ambient background blobs — motion-safe:
+     gates all three so a reduced-motion visitor gets a static (still
+     colorful) backdrop instead of perpetual movement. */
+  --animate-float-1: float-1 14s ease-in-out infinite;
+  --animate-float-2: float-2 18s ease-in-out infinite;
+  --animate-drift: drift 22s ease-in-out infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
+@keyframes float-1 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -14px, 0);
+  }
+}
+
+@keyframes float-2 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(-12px, 10px, 0);
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(6px, -10px, 0) rotate(3deg);
+  }
+}
+
+/* Ambient blob colors — kept as classes (not inline style) so the
+   light/dark --blob-* swap above applies automatically; position/size/blur
+   are the reference's exact numbers and stay as Tailwind arbitrary values
+   in AmbientBackground.tsx, matching how the rest of the app reserves
+   inline style for genuinely runtime-computed values only. */
+.ambient-blob-1 {
+  background: radial-gradient(
+    circle at center,
+    var(--blob-1) 0%,
+    transparent 60%
+  );
+}
+.ambient-blob-2 {
+  background: radial-gradient(
+    circle at center,
+    var(--blob-2) 0%,
+    transparent 60%
+  );
+}
+.ambient-blob-3 {
+  background: radial-gradient(
+    circle at center,
+    var(--blob-3) 0%,
+    transparent 60%
+  );
+}
+
+/* The one shared glass surface — every "surface" in the app writes this one
+   class instead of a hand-copied blur/opacity/shadow combo. Direction A:
+   heaviest blur, highest transparency (chosen after a two-round mockup
+   review — see the milestone-6 plan for the other two directions). */
+@utility surface {
+  background: var(--color-surface-translucent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glass);
+  /* Explicit -webkit- fallback: Safari needs it for backdrop-filter, and
+     glass is this milestone's headline visual. */
+  -webkit-backdrop-filter: blur(20px) saturate(1.15);
+  backdrop-filter: blur(20px) saturate(1.15);
+}
+
+/* From-scratch addition — there is no existing focus styling to regress.
+   outline/outline-offset, not box-shadow: glass surfaces commonly clip with
+   overflow/rounded corners, and a real outline renders outside that
+   clipping box where a shadow-based ring would get cut off. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
