@@ -1,10 +1,9 @@
 import localFont from "next/font/local";
 import type { CuratedFontFamily } from "./scale";
 
-// Self-hosted, static-instance TTFs — see scripts/fetch-fonts.sh for how
-// these were sourced (Satori, used by the OG image route, can't parse
-// variable fonts, so these have to be real per-weight static files, not the
-// variable builds Google Fonts serves by default).
+// The font files themselves live in assets/fonts (see scripts/fetch-fonts.sh
+// for how they were downloaded) instead of being loaded from Google at
+// runtime, so the app doesn't depend on an outside service to show text.
 
 const inter = localFont({
   src: [
@@ -12,7 +11,7 @@ const inter = localFont({
     { path: "../assets/fonts/inter/Inter-SemiBold.ttf", weight: "600" },
   ],
   variable: "--font-inter",
-  preload: true, // the default family — the only one worth preloading
+  preload: true, // this is the default font, so it's worth loading right away
 });
 
 const roboto = localFont({
@@ -51,8 +50,8 @@ const montserrat = localFont({
   preload: false,
 });
 
-// Both files are italic-only (a deliberate pairing choice for this display
-// serif — see scripts/fetch-fonts.sh) — no upright style exists to select.
+// Playfair Display is only loaded in italic here — a style choice, not
+// an accident (there's no upright version to pick).
 const playfairDisplay = localFont({
   src: [
     {
@@ -70,9 +69,8 @@ const playfairDisplay = localFont({
   preload: false,
 });
 
-// Applied to <body> in app/layout.tsx so every family's CSS variable is
-// defined app-wide — the editor and the public /s/[slug] page both get them
-// for free from the shared root layout.
+// Added to the whole app's <body> in app/layout.tsx, so every page can use
+// any of these fonts without loading them separately.
 export const FONT_CLASS_NAMES = [
   inter.variable,
   roboto.variable,

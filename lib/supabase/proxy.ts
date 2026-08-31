@@ -1,8 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-/** Refreshes the auth session cookie on every request. Called from the
- * project-root proxy.ts (Next 16's renamed middleware convention). */
+/** Keeps someone's login session fresh on every page visit. */
 export async function updateSession(request: NextRequest) {
   const response = NextResponse.next({ request });
 
@@ -22,8 +21,7 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // Nothing must run between client construction and this call — it's what
-  // actually refreshes/validates the session and triggers the cookie writes above.
+  // This actually checks and refreshes the login session.
   await supabase.auth.getClaims();
 
   return response;

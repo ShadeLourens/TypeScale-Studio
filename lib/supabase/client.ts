@@ -1,6 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 
-/** Browser-side Supabase client — for use in "use client" components. */
+/** Connects to Supabase (the database/login service) from the browser. */
 export function createClient() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

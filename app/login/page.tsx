@@ -4,8 +4,8 @@ import { Suspense, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-/** Only allow same-origin relative paths as a redirect target — a
- * ?redirect= value could otherwise be crafted to send users off-site. */
+/** Makes sure someone can only be redirected back within this site after
+ * logging in, never sent off to some other website. */
 function resolveSafeRedirect(redirect: string | null): string {
   if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
     return redirect;
@@ -79,7 +79,8 @@ function LoginPageInner() {
   );
 }
 
-// useSearchParams() requires a Suspense boundary, same as app/editor/page.tsx.
+// Next.js requires this kind of page to be wrapped like this when it reads
+// the link's search text.
 export default function LoginPage() {
   return (
     <Suspense fallback={null}>

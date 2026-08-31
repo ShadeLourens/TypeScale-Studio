@@ -4,12 +4,9 @@ import { decodeConfig, encodeConfig } from "./url-state";
 import { initialEditorConfig } from "./editor-reducer";
 import type { ScaleConfig } from "./scale";
 
-// Two groups: "round trip" proves encode+decode is lossless on real configs;
-// "malformed input" proves decodeConfig is safe against anything a user could
-// paste into the ?c= URL param — corrupt strings, right-shaped-but-wrong
-// values, wrong schema version. Every case in the second group must resolve
-// to `null`, never throw, since a bad share link should just fall back to
-// defaults instead of crashing the page.
+// Two groups of tests: one proves a scale survives being turned into a link
+// and back with nothing lost; the other proves that broken or tampered-with
+// links never crash the page, and just fall back to a default scale instead.
 describe("url-state", () => {
   describe("round trip", () => {
     it("decodeConfig(encodeConfig(x)) returns an equal config for the default config", () => {
@@ -46,10 +43,8 @@ describe("url-state", () => {
     });
   });
 
-  // Each case here builds a config that's valid JSON but wrong in one specific
-  // way, compresses it exactly like the real app would, then confirms
-  // decodeConfig rejects it. Building from a real, valid config and mutating
-  // just one field keeps each test focused on the one thing it's checking.
+  // Each test here takes a valid scale and breaks exactly one thing about
+  // it, then checks that it gets correctly rejected.
   describe("malformed input returns null, never throws", () => {
     it("garbage string", () => {
       expect(decodeConfig("not-a-real-compressed-string!!")).toBeNull();
@@ -138,9 +133,8 @@ describe("url-state", () => {
       expect(decodeConfig(truncated)).toBeNull();
     });
 
-    // Catch-all sweep, separate from the targeted cases above: these aren't
-    // even valid compressed/JSON strings, just things a human might type or
-    // paste by accident (empty, whitespace, emoji, a huge blob).
+    // A grab-bag of odd, real-world things someone might accidentally
+    // paste into a link, just to be sure none of them ever cause a crash.
     it("never throws across a batch of adversarial inputs", () => {
       const inputs = [
         "",

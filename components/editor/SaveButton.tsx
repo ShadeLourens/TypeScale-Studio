@@ -10,10 +10,8 @@ export interface SaveButtonProps {
   config: ScaleConfig;
 }
 
-// The server is the single source of truth for "are you logged in": this
-// always tries saveScale first rather than pre-checking auth state client
-// side, which avoids a client/server auth-state race (e.g. a session that
-// just expired but the client doesn't know yet).
+// Always tries to save first, rather than checking "are you logged in?"
+// beforehand — that way it always reflects the real, current login state.
 export function SaveButton({ config }: SaveButtonProps) {
   const router = useRouter();
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");

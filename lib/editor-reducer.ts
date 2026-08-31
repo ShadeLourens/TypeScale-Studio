@@ -14,7 +14,7 @@ export type EditorAction =
 
 export const initialEditorConfig: ScaleConfig = {
   version: 1,
-  base: { fontSize: 16, ratio: 1.25, stepsUp: 5, stepsDown: 2, rounding: "none" },
+  base: { fontSize: 15, ratio: 1.25, stepsUp: 5, stepsDown: 2, rounding: "none" },
   fonts: {
     heading: { family: "Inter", weights: [600], fallback: "sans-serif" },
     body: { family: "Inter", weights: [400], fallback: "sans-serif" },
@@ -23,7 +23,7 @@ export const initialEditorConfig: ScaleConfig = {
   theme: "dark",
 };
 
-/** Pure reducer over ScaleConfig — drives the editor's useReducer, zero React import. */
+/** Applies one change to a scale's settings and returns the updated version. */
 export function editorReducer(state: ScaleConfig, action: EditorAction): ScaleConfig {
   switch (action.type) {
     case "setBaseFontSize":
@@ -40,7 +40,6 @@ export function editorReducer(state: ScaleConfig, action: EditorAction): ScaleCo
       return { ...state, fonts: { ...state.fonts, [action.role]: action.font } };
     case "setStepOverride": {
       const key = String(action.step);
-      // state.overrides[key] is StepOverride | undefined under noUncheckedIndexedAccess.
       return {
         ...state,
         overrides: { ...state.overrides, [key]: { ...(state.overrides[key] ?? {}), ...action.override } },
@@ -54,8 +53,8 @@ export function editorReducer(state: ScaleConfig, action: EditorAction): ScaleCo
     case "setTheme":
       return { ...state, theme: action.theme };
     case "loadConfig":
-      // Bulk-replaces state wholesale — used to restore a config stashed in
-      // sessionStorage before a login redirect (see lib/save-stash.ts).
+      // Replaces everything at once — used to restore a scale that was
+      // saved temporarily before sending someone to log in.
       return action.config;
     default:
       return state;

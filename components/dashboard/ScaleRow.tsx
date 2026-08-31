@@ -12,20 +12,13 @@ export interface ScaleRowProps {
 
 type Mode = "idle" | "renaming" | "deleting";
 
-// Fixed locale + UTC timezone: this renders in a client component after
-// server-rendering the same markup, so an implicit/browser-detected locale
-// or timezone would diverge between server and client and trigger a React
-// hydration-mismatch warning on this cell. Explicit settings make the output
-// identical on both sides regardless of where each render actually happens.
+// A fixed date format, so the date always looks the same no matter where
+// someone is in the world or how their browser is set up.
 const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
   dateStyle: "medium",
   timeZone: "UTC",
 });
 
-// Flat buttons, not glass — the row itself stays a plain table row too (a
-// translucent/blurred <tr> fights native table rendering, per the
-// milestone-6 plan). transition-colors + hover:border-accent is this
-// component's share of the motion pass.
 const BTN_CLASS =
   "rounded-sm border border-border px-2 py-1 transition-colors hover:border-accent";
 
@@ -39,10 +32,8 @@ export function ScaleRow({ scale }: ScaleRowProps) {
   const [isPending, setIsPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Session can expire while the dashboard is just sitting open — without
-  // this, a rename/delete after that point would fail forever with a
-  // "try again" message that can never succeed. Matches SaveButton's
-  // existing not-authenticated -> redirect-to-login handling for consistency.
+  // Sends someone back to log in if their session has expired while this
+  // page was just sitting open.
   function handleNotAuthenticated() {
     router.push("/login?redirect=/dashboard");
   }
@@ -55,8 +46,7 @@ export function ScaleRow({ scale }: ScaleRowProps) {
     const result = await renameScale(scale.id, trimmed);
     setIsPending(false);
     if (result.ok) {
-      setMode("idle"); // revalidatePath inside the action refreshes this
-      // row's server data on the next render — no router.refresh() needed.
+      setMode("idle"); // the row's data refreshes itself automatically
     } else if (result.error === "not-authenticated") {
       handleNotAuthenticated();
     } else {
@@ -78,7 +68,7 @@ export function ScaleRow({ scale }: ScaleRowProps) {
         setMode("idle");
       }
     }
-    // On success the row disappears via revalidatePath, no local removal needed.
+    // On success the row just disappears on its own — nothing more to do here.
   }
 
   async function handleCopyLink() {

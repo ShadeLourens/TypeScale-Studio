@@ -1,11 +1,8 @@
 "use client";
 
-// Root-level fallback — only fires if the root layout itself throws, which
-// this app's simple layout makes unlikely. Must render its own <html>/
-// <body> per the App Router convention (it replaces the layout, not just
-// the page), and deliberately imports nothing else from the app — a broken
-// root layout is exactly the situation where pulling in more app code
-// could compound the failure.
+// A last-resort error page for the rare case where something breaks in a
+// very fundamental part of the app. Kept extremely simple and self-contained
+// on purpose, since it needs to work even if the rest of the app can't.
 export default function GlobalError({
   reset,
 }: {

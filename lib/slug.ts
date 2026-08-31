@@ -13,8 +13,9 @@ const NOUNS = [
 const SUFFIX_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
 const SUFFIX_LENGTH = 4;
 
-/** "warm-serif-x7k2" — two curated words + 4 random chars. Not cryptographically
- * unique on its own; callers (saveScale) retry on a unique-constraint collision. */
+/** Creates a friendly link ending like "warm-serif-x7k2" — two words plus
+ * 4 random characters. It's not guaranteed to be unique, so whatever calls
+ * this will just try again if it happens to clash with an existing one. */
 export function generateSlug(): string {
   const adjective = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
   const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { resolveScale, type ScaleConfig } from "./scale";
 
-// Default fixture: base 16, ratio 1.25 (Major Third), 2 steps down / 5 up, no overrides.
-// Pass `overrides` to change just the fields a given test cares about.
+// A standard test scale to build the other tests from. Pass `overrides`
+// to change just the parts a given test cares about.
 function makeConfig(overrides: Partial<ScaleConfig> = {}): ScaleConfig {
   return {
     version: 1,
@@ -56,9 +56,8 @@ describe("resolveScale", () => {
     expect(result.every((r) => r.weight === 400)).toBe(true);
   });
 
-  // Steps above base are heading territory (h1-h6); base and everything
-  // below it is body-sized text (paragraph copy, captions) — see the
-  // comment in resolveScale for why this is the one place that rule lives.
+  // Sizes above the base use the heading font; the base and everything
+  // smaller uses the body font.
   it("assigns the heading font above base and the body font at/below base", () => {
     const config = makeConfig({
       fonts: {
@@ -83,8 +82,7 @@ describe("resolveScale", () => {
     }
   });
 
-  // config.base.rounding controls the stored/exported value, not UI display formatting
-  // (components format to 1 decimal on top of this regardless of mode — see scale.ts).
+  // Tests for the three different ways a calculated size can be rounded.
   describe("rounding modes", () => {
     it("'none' avoids float artifacts but keeps the unrounded scale", () => {
       const config = makeConfig({
@@ -145,9 +143,7 @@ describe("resolveScale", () => {
     });
   });
 
-  // StepOverride fields are all optional and keyed by step index (spec.md §2): only the
-  // fields a designer actually touched are stored, everything else falls back to the
-  // computed default for that step.
+  // Tests for manually tweaking one step's settings.
   describe("overrides", () => {
     it("applies weight, lineHeight, letterSpacing, and label only to the targeted step", () => {
       const config = makeConfig({

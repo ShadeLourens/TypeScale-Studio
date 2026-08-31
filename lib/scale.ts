@@ -1,9 +1,7 @@
-// ── The single source of truth (spec.md §2) ─────────────────────────────
+// ── This file defines what a "type scale" is and how to calculate one ──
 
-// Hoisted to const arrays (rather than inlined into the interfaces below) so
-// lib/url-state.ts can import these exact value sets for its runtime
-// validator instead of hand-copying them — one source of truth, no drift risk
-// if a value is ever added or removed here.
+// These lists are defined once here so every other file that needs them
+// (like the URL and form validation) uses the exact same options.
 export const ROUNDING_VALUES = [
   "none",
   "nearest-px",
@@ -16,9 +14,7 @@ export const FONT_FALLBACK_VALUES = [
   "monospace",
 ] as const;
 
-// The five self-hosted families available in the picker (see lib/fonts.ts
-// for the actual font files/CSS variables). Closed union, not a plain
-// string, so an unknown family can never survive decodeConfig/isScaleConfig.
+// The five fonts available in the font picker.
 export const CURATED_FONT_FAMILIES = [
   "Inter",
   "Roboto",
@@ -28,11 +24,9 @@ export const CURATED_FONT_FAMILIES = [
 ] as const;
 export type CuratedFontFamily = (typeof CURATED_FONT_FAMILIES)[number];
 
-// Per-family metadata the picker and font loaders both need — one source so
-// they can't drift apart. Playfair Display's only loaded instances are
-// italic (see assets/fonts/playfair-display/), so consumers that render text
-// key off `family === "Playfair Display"` for fontStyle rather than this map
-// carrying a style field only one family would ever use.
+// Extra details for each font (its backup font, and which weights are
+// available). Playfair Display only comes in italic, which is why some
+// other files check for that font by name.
 export const FONT_META: Record<
   CuratedFontFamily,
   { fallback: (typeof FONT_FALLBACK_VALUES)[number]; weights: number[] }
@@ -44,20 +38,21 @@ export const FONT_META: Record<
   "Playfair Display": { fallback: "serif", weights: [400, 600] },
 };
 
+// All the settings that make up one type scale.
 export interface ScaleConfig {
-  /** Schema version — lets you migrate old saved configs later */
+  /** Version number, in case old saved scales ever need updating later. */
   version: 1;
 
   base: {
-    /** Base font size in px (root of the scale) */
-    fontSize: number; // default 16, range 12–24
-    /** Scale ratio, e.g. 1.25 = Major Third */
+    /** The starting font size in px. */
+    fontSize: number; // default 15, range 12–24
+    /** How much bigger/smaller each step is, e.g. 1.25 = Major Third. */
     ratio: number; // default 1.25
-    /** Steps above base (h1..h6 territory) */
+    /** How many sizes go above the base (for headings). */
     stepsUp: number; // default 5, max 8
-    /** Steps below base (small, caption) */
+    /** How many sizes go below the base (for captions, small text). */
     stepsDown: number; // default 2, max 3
-    /** Rounding for computed sizes */
+    /** How computed sizes get rounded. */
     rounding: (typeof ROUNDING_VALUES)[number];
   };
 
@@ -67,9 +62,9 @@ export interface ScaleConfig {
   };
 
   /**
-   * Per-step overrides, keyed by step index (e.g. "3" = 3 steps up).
-   * Only stores the fields the user actually changed — keeps configs small
-   * and means changing the ratio doesn't wipe manual tweaks.
+   * Manual tweaks to individual steps, e.g. "3" for the 3rd step up.
+   * Only the fields someone actually changed are stored, so changing the
+   * ratio later doesn't erase any manual tweaks.
    */
   overrides: Record<string, StepOverride>;
 
@@ -77,9 +72,9 @@ export interface ScaleConfig {
 }
 
 export interface FontChoice {
-  /** One of the curated, self-hosted families — see CURATED_FONT_FAMILIES. */
+  /** One of the five available fonts. */
   family: CuratedFontFamily;
-  /** Weights actually loaded — keep to what's used */
+  /** Which weights (e.g. regular, bold) are loaded for this font. */
   weights: number[]; // e.g. [400, 600]
   fallback: (typeof FONT_FALLBACK_VALUES)[number];
 }
@@ -88,29 +83,29 @@ export interface StepOverride {
   weight?: number;
   lineHeight?: number; // unitless, e.g. 1.4
   letterSpacing?: number; // em, e.g. -0.02
-  /** Optional semantic label, e.g. "Display", "Caption" */
+  /** Optional name for this step, e.g. "Display", "Caption". */
   label?: string;
 }
 
-// ── Derived (computed, never stored) ────────────────────────────────────
+// ── Everything below is calculated, not stored ──
 
 export interface ResolvedStep {
   step: number; // -stepsDown..+stepsUp, 0 = base
-  label: string; // "Step +3" or user label
+  label: string; // "Step +3" or a custom label
   fontSizePx: number;
   fontSizeRem: number;
   weight: number;
   lineHeight: number;
   letterSpacing: number;
-  /** Which curated family this step renders in — see the heading/body split in resolveScale(). */
+  /** Which font this step uses. */
   family: CuratedFontFamily;
   fallback: (typeof FONT_FALLBACK_VALUES)[number];
 }
 
-/** Standard browser root font-size, used to convert px to rem regardless of scale base. */
+/** A standard browser's default font size, used to convert px to rem. */
 const ROOT_FONT_SIZE_PX = 16;
 
-/** Decimal precision used to strip float noise (31.3, never 31.299999999999997). */
+/** How many decimal places to keep, so sizes look like 31.3, not 31.299999999999997. */
 const DISPLAY_PRECISION = 4;
 
 /** Rounds a number to a fixed number of decimal places. */
@@ -119,10 +114,7 @@ function roundTo(value: number, decimals: number): number {
   return Math.round(value * factor) / factor;
 }
 
-/**
- * Takes a raw (unrounded) px size and applies the config's `rounding` mode,
- * returning both the px and rem values kept in sync with each other.
- */
+/** Applies the chosen rounding style to a calculated size. */
 function applyRounding(
   rawPx: number,
   rounding: ScaleConfig["base"]["rounding"],
@@ -151,24 +143,24 @@ function applyRounding(
   }
 }
 
-/** Default label for a step when the user hasn't set one: "Base", "Step +3", "Step -2". */
+/** The default name for a step, e.g. "Base", "Step +3", "Step -2". */
 function defaultLabel(step: number): string {
   if (step === 0) return "Base";
   return step > 0 ? `Step +${step}` : `Step ${step}`;
 }
 
-/** Default font weight for a step when the user hasn't overridden it. */
+/** The default font weight, used unless a step has its own override. */
 function defaultWeight(): number {
   return 400;
 }
 
-/** Larger steps read tighter, smaller steps read looser — common type-scale convention. */
+/** Bigger text sits tighter, smaller text sits looser — a common type design rule. */
 function defaultLineHeight(step: number): number {
   const raw = 1.5 - step * 0.05;
   return roundTo(Math.min(1.6, Math.max(1.1, raw)), 2);
 }
 
-/** Display sizes tighten (negative tracking), small sizes open up (positive tracking). */
+/** Bigger text spaces its letters tighter, smaller text spaces them wider. */
 function defaultLetterSpacing(step: number): number {
   if (step > 0) return roundTo(Math.max(-0.005 * step, -0.03), 3);
   if (step < 0) return roundTo(Math.min(0.01 * -step, 0.02), 3);
@@ -176,24 +168,21 @@ function defaultLetterSpacing(step: number): number {
 }
 
 /**
- * Pure function — the heart of the app. Unit-test this.
- *
- * Walks every step from -stepsDown to +stepsUp, computes its font size from
- * fontSize * ratio^step, then layers any matching StepOverride on top of the
- * computed defaults (weight, lineHeight, letterSpacing, label).
+ * The main calculation this whole app is built around: turns one set of
+ * settings into a full list of font sizes, one per step, each with its
+ * weight, spacing, and font already worked out.
  */
 export function resolveScale(config: ScaleConfig): ResolvedStep[] {
   const { fontSize, ratio, stepsUp, stepsDown, rounding } = config.base;
   const steps: ResolvedStep[] = [];
 
   for (let step = -stepsDown; step <= stepsUp; step++) {
-    // ratio^step: negative steps divide down from the base, positive steps multiply up.
+    // Each step multiplies (or divides) the base size by the ratio.
     const rawPx = fontSize * ratio ** step;
     const { fontSizePx, fontSizeRem } = applyRounding(rawPx, rounding);
     const override = config.overrides[String(step)];
-    // step 0 ("Base") and everything below it is body-sized text (paragraph
-    // copy, captions); only steps above base are heading territory (h1-h6).
-    // This is the one place that rule lives — nothing downstream re-derives it.
+    // Steps above the base use the heading font; the base and everything
+    // below it use the body font.
     const role = step > 0 ? config.fonts.heading : config.fonts.body;
 
     steps.push({

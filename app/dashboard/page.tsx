@@ -19,13 +19,9 @@ export default async function DashboardPage() {
       <h1 className="text-lg font-semibold">Your scales</h1>
 
       {scales === null ? (
-        // Distinct from the empty state below: this is a fetch failure, not
-        // "you have zero scales" — collapsing the two would tell a user with
-        // saved scales that they have none, with a cheery CTA to start over.
-        // Plain `surface`, not a red-tinted border on top of it — mixing the
-        // utility's own border-color with a red override risks a Tailwind
-        // cascade conflict (which class wins depends on generation order,
-        // not source order); the red text alone already signals the error.
+        // Shown when loading the scales failed — different from the empty
+        // state below, so someone who actually has saved scales never sees
+        // a false "you have none" message.
         <div className="surface flex flex-col items-start gap-3 p-8">
           <p className="text-sm text-red-600">
             Couldn&apos;t load your scales — try refreshing.

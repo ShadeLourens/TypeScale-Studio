@@ -4,27 +4,34 @@ import { isScaleConfig } from "@/lib/url-state";
 import type { ScaleConfig } from "@/lib/scale";
 
 export interface SharedScale {
+  id: string;
+  ownerId: string;
   name: string;
   config: ScaleConfig;
 }
 
-/** Fetches a public scale by slug. Relies entirely on the `is_public = true`
- * RLS policy — no auth check needed, works for a logged-out visitor.
- * cache()'d so generateMetadata and the page body share one fetch per request. */
+/** Looks up a publicly shared scale by its link. Anyone can view a shared
+ * scale, so there's no login check here. `ownerId` is included so the page
+ * can tell whether the person viewing it is allowed to rename it. */
 export const getScaleBySlug = cache(
   async (slug: string): Promise<SharedScale | null> => {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("scales")
-      .select("name, config")
+      .select("id, owner_id, name, config")
       .eq("slug", slug)
       .maybeSingle();
     if (error || !data) return null;
 
     const config: unknown = data.config;
-    if (!isScaleConfig(config)) return null; // defensive re-check on a row read back from the database
+    if (!isScaleConfig(config)) return null; // double-check the data really is a valid scale
 
-    return { name: String(data.name), config };
+    return {
+      id: String(data.id),
+      ownerId: String(data.owner_id),
+      name: String(data.name),
+      config,
+    };
   },
 );
 
@@ -35,16 +42,13 @@ export interface OwnedScale {
   updatedAt: string;
 }
 
-/** Lightweight list for the dashboard — deliberately does NOT select `config`
- * (jsonb), which every row would otherwise carry just to be unused in the
- * list view. "Open" links to /s/[slug] instead of directly into the editor,
- * reusing the share page's own "Open in editor" link rather than re-fetching
- * full configs here.
+/** Gets the list of scales someone has saved, for their dashboard. Keeps
+ * the list light by not loading each scale's full settings — the "Open"
+ * link takes you to the share page, which loads those separately.
  *
- * Returns null on a genuine fetch error, distinct from an empty array (a
- * real "you have zero scales") — collapsing both into [] would show a user
- * with saved scales a false "No scales yet" empty state during a transient
- * DB failure. The dashboard page renders these two cases differently. */
+ * Returns null if something went wrong loading the list, which is
+ * different from an empty list (meaning they really have no saved
+ * scales). The dashboard shows a different message for each case. */
 export const getScalesByOwner = cache(
   async (ownerId: string): Promise<OwnedScale[] | null> => {
     const supabase = await createClient();
