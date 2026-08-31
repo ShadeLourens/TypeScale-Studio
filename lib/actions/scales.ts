@@ -19,10 +19,9 @@ export type SaveScaleResult =
         | "unknown";
     };
 
-/** Saves a scale for the current user, generating a unique slug server-side.
- * `config` is typed unknown and validated here — Server Actions are public
- * POST endpoints reachable independent of the UI that calls them, so this
- * gets the same "never trust it" treatment URL input already gets. */
+/** Saves a scale for the signed-in user and gives it a unique link.
+ * The incoming data is checked carefully here, since this can technically
+ * be called by anything, not just this app's own save button. */
 export async function saveScale(config: unknown): Promise<SaveScaleResult> {
   if (!isScaleConfig(config)) return { ok: false, error: "invalid-config" };
 
@@ -39,7 +38,7 @@ export async function saveScale(config: unknown): Promise<SaveScaleResult> {
       .from("scales")
       .insert({ owner_id: user.id, slug, config });
     if (!error) return { ok: true, slug };
-    if (error.code !== "23505") return { ok: false, error: "unknown" }; // not a slug collision — real failure
+    if (error.code !== "23505") return { ok: false, error: "unknown" }; // some other, real error
   }
 
   return { ok: false, error: "slug-collision" };
@@ -71,7 +70,7 @@ export async function renameScale(
     .from("scales")
     .update({ name: trimmed, updated_at: new Date().toISOString() })
     .eq("id", id)
-    .eq("owner_id", user.id) // redundant with RLS — lets us detect "matched nothing" as not-found
+    .eq("owner_id", user.id) // makes sure this is actually your own scale
     .select("id")
     .maybeSingle();
 

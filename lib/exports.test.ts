@@ -3,14 +3,14 @@ import { toCSS, toTailwind, toTokens } from "./exports";
 import { initialEditorConfig } from "./editor-reducer";
 import type { ScaleConfig } from "./scale";
 
-// A single-step config (step 0 only) keeps the exact-string assertions below
-// small enough to read at a glance, while the initialEditorConfig-based
-// checks confirm the real multi-step shape (negative/positive suffixes, the
-// :root/@theme wrapper) without pinning down every line of a long string.
+// A scale with just one size, so the expected output below is short and
+// easy to read at a glance. fontSize is pinned to 16 here (rather than
+// reusing the app's own default) so this test keeps checking the export
+// *format* and doesn't break if that default is ever tuned.
 function minimalConfig(): ScaleConfig {
   return {
     ...initialEditorConfig,
-    base: { ...initialEditorConfig.base, stepsUp: 0, stepsDown: 0 },
+    base: { ...initialEditorConfig.base, fontSize: 16, stepsUp: 0, stepsDown: 0 },
     overrides: {},
   };
 }
@@ -51,9 +51,8 @@ describe("toTailwind", () => {
     );
   });
 
-  // Guards the naming-hazard fix: Tailwind's @theme parser reads a second "--"
-  // as the start of a compound sub-property, so a signed-number suffix like
-  // "--text-step--2" would risk being misparsed and silently dropped.
+  // Makes sure negative step numbers never produce a name Tailwind would
+  // misread, like "--text-step--2".
   it("never produces a double-dash-before-a-negative-number suffix", () => {
     const tailwind = toTailwind(initialEditorConfig);
     expect(tailwind).not.toMatch(/--text-step--\d/);
@@ -104,8 +103,7 @@ describe("overrides reflected in every export", () => {
   });
 });
 
-// toCSS and toTailwind must name each step identically (minus their prefix),
-// so switching between the two exports never requires renaming anything.
+// The CSS and Tailwind exports should name each step the same way.
 describe("naming consistency between toCSS and toTailwind", () => {
   it("uses the same step suffixes in both formats", () => {
     const css = toCSS(initialEditorConfig);

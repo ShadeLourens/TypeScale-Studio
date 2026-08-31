@@ -1,6 +1,4 @@
-// Next auto-wraps app/dashboard/page.tsx in a Suspense boundary keyed to
-// this file — no change needed in the page itself. Shown while the
-// getScalesByOwner round trip resolves.
+// Shown automatically while the list of saved scales is still loading.
 export default function DashboardLoading() {
   return (
     <div className="flex min-h-screen flex-col gap-6 p-6">

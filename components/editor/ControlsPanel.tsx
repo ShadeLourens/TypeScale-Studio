@@ -5,7 +5,6 @@ import type { EditorAction } from "@/lib/editor-reducer";
 import {
   CURATED_FONT_FAMILIES,
   FONT_META,
-  THEME_VALUES,
   type CuratedFontFamily,
   type ScaleConfig,
 } from "@/lib/scale";
@@ -13,30 +12,23 @@ import { FONT_CSS_VARS } from "@/lib/fonts";
 
 export interface ControlsPanelProps {
   config: ScaleConfig;
-  // Dispatch is passed in rather than owning a reducer here, so the parent
-  // page stays the single source of truth (see app/editor/page.tsx).
+  // The page above this component keeps track of the scale's settings —
+  // this just sends changes up to it.
   dispatch: Dispatch<EditorAction>;
 }
 
-// Flatter "recessed" treatment, not the full glass `surface` utility — the
-// panel container below already goes full glass; stacking glass-on-glass on
-// every tiny control reads busy (see the milestone-6 plan's Phase B notes).
+// A plain, understated look for the input boxes, so they don't compete
+// with the frosted-glass card they sit inside.
 const FIELD_CLASS =
   "rounded-sm border border-border bg-surface/60 px-2.5 py-1.5 text-sm transition-colors focus-visible:border-accent";
 
-// "use client" (top of file) because of the useState below — unlike
-// ScalePreview, this component is editor-only and has no future server-render
-// use case, so there's no reason to avoid client state here.
 export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
-  // Which step's override fields are currently shown below. Deliberately
-  // local, not lifted to the page or shared with ScalePreview — nothing else
-  // needs to know which step is selected yet.
+  // Which step's settings are currently shown at the bottom of this panel.
   const [selectedStep, setSelectedStep] = useState(0);
-  // config.overrides is keyed by String(step) and every field is optional —
-  // `override` is undefined whenever the selected step has no overrides yet.
+  // The manual tweaks for the step that's currently selected, if there are any.
   const override = config.overrides[String(selectedStep)];
 
-  // -stepsDown..+stepsUp inclusive — same range resolveScale() iterates over.
+  // Builds the list of steps to choose from, e.g. -2, -1, 0, 1, 2, 3.
   const stepOptions: number[] = [];
   for (let step = -config.base.stepsDown; step <= config.base.stepsUp; step++) {
     stepOptions.push(step);
@@ -44,7 +36,9 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
 
   return (
     <form
-      className="surface flex w-full max-w-xs flex-col gap-4 p-4"
+      // Keeps this card sized to fit its own content, rather than
+      // stretching to match the height of the taller preview card beside it.
+      className="surface grid w-full max-w-sm grid-cols-2 content-start gap-x-5 gap-y-5 self-center p-5 editor:self-start"
       onSubmit={(e) => e.preventDefault()}
     >
       <label className="flex flex-col gap-1 text-sm">
@@ -128,26 +122,6 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
-        Scale theme
-        <select
-          value={config.theme}
-          onChange={(e) =>
-            dispatch({
-              type: "setTheme",
-              theme: e.target.value as ScaleConfig["theme"],
-            })
-          }
-          className={FIELD_CLASS}
-        >
-          {THEME_VALUES.map((theme) => (
-            <option key={theme} value={theme}>
-              {theme === "light" ? "Light" : "Dark"}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className="flex flex-col gap-1 text-sm">
         Heading font
         <select
           value={config.fonts.heading.family}
@@ -199,7 +173,9 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
         </select>
       </label>
 
-      <hr className="border-border" />
+      {/* A divider between the scale's overall settings above and the
+          per-step overrides below. */}
+      <hr className="col-span-2 my-0 border-border" />
 
       <label className="flex flex-col gap-1 text-sm">
         Step to override
@@ -286,12 +262,14 @@ export function ControlsPanel({ config, dispatch }: ControlsPanelProps) {
         />
       </label>
 
+      {/* Sits next to the Letter spacing field instead of on its own row,
+          to save space. */}
       <button
         type="button"
         onClick={() =>
           dispatch({ type: "clearStepOverride", step: selectedStep })
         }
-        className="rounded-sm border border-border px-3 py-1.5 text-sm transition-colors hover:border-accent"
+        className="self-end rounded-sm border border-border px-3 py-1 text-sm transition-colors hover:border-accent"
       >
         Clear override
       </button>

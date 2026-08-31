@@ -1,9 +1,7 @@
 import Link from "next/link";
 
-// Segment-scoped — Next resolves notFound() calls to the nearest
-// not-found.tsx in the segment tree, so this catches
-// app/s/[slug]/page.tsx's notFound() with copy specific to a missing scale,
-// rather than falling through to the generic app/not-found.tsx.
+// Shown specifically when a shared link doesn't match any real scale,
+// with wording more specific than the site's general "page not found" page.
 export default function SharedScaleNotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">

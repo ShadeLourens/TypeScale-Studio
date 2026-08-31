@@ -2,64 +2,83 @@ import type { ResolvedStep, ScaleConfig } from "@/lib/scale";
 import { FONT_CSS_VARS } from "@/lib/fonts";
 import { THEME_COLORS } from "@/lib/theme-colors";
 
+const DEFAULT_SAMPLE_TEXT = "The quick brown fox";
+
 export interface ScalePreviewProps {
   steps: ResolvedStep[];
-  // The scale's own stored theme — deliberately independent of the app's
-  // own dark/light toggle (ThemeToggle only ever writes data-theme on
-  // <html>, which this component never reads). A scale can render light
-  // while the app chrome around it is dark, and vice versa.
+  // Light or dark, just for this preview — separate from the app's own
+  // light/dark toggle.
   theme: ScaleConfig["theme"];
-  // Unused for now — reserved so a future public /s/[slug] share page can
-  // render this exact component server-side with readOnly set, per the spec's
-  // "same component, readOnly prop" reuse pattern.
+  // Used on the public share page, where the preview isn't editable.
   readOnly?: boolean;
+  // The text shown at every size — defaults to a short sample phrase.
+  // Only editable when onSampleTextChange is provided (in the editor).
+  sampleText?: string;
+  onSampleTextChange?: (text: string) => void;
 }
 
-// No "use client" — this is a plain function of props with zero hooks, so it
-// can be rendered from a server component later without forcing a client
-// boundary (see readOnly above).
 export function ScalePreview({
   steps,
   theme,
   readOnly = false,
+  sampleText,
+  onSampleTextChange,
 }: ScalePreviewProps) {
   const colors = THEME_COLORS[theme];
+  // Shows the biggest (heading) size at the top and the smallest at the
+  // bottom, like a real page would.
+  const displaySteps = [...steps].reverse();
+  const text = sampleText ?? DEFAULT_SAMPLE_TEXT;
 
   return (
     <section
       aria-label="Scale preview"
-      // A data attribute, not aria-readonly — that ARIA attribute isn't valid
-      // on this element's implicit role and trips an eslint a11y warning.
       data-readonly={readOnly || undefined}
       className="flex w-full flex-col gap-6 rounded-lg p-4"
       style={{ background: colors.background, color: colors.foreground }}
     >
-      {steps.map((s) => (
+      {onSampleTextChange && (
+        <label
+          className="flex flex-col gap-1 text-xs"
+          style={{ color: colors.muted }}
+        >
+          Preview text
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => onSampleTextChange(e.target.value)}
+            className="rounded-sm border bg-transparent px-2.5 py-1.5 text-sm transition-colors"
+            style={{ borderColor: colors.muted, color: colors.foreground }}
+          />
+        </label>
+      )}
+      {displaySteps.map((s) => (
         <div
           key={s.step}
           className="flex items-baseline gap-3 border-b pb-2"
           style={{ borderColor: colors.muted }}
         >
-          <span className="w-20 shrink-0 text-xs" style={{ color: colors.muted }}>
+          <span
+            className="w-20 shrink-0 text-xs"
+            style={{ color: colors.muted }}
+          >
             {s.label}
           </span>
           <p
             className="m-0"
-            // Inline style, not Tailwind classes: these values come from
-            // resolveScale() at runtime, and Tailwind can only generate
-            // classes for strings it sees at build time.
+            // These sizes are calculated on the fly, so they're set here
+            // directly instead of as reusable style classes.
             style={{
               fontFamily: `${FONT_CSS_VARS[s.family]}, ${s.fallback}`,
               fontSize: `${s.fontSizePx}px`,
               fontWeight: s.weight,
-              // Playfair Display's only loaded instances are italic (see
-              // lib/fonts.ts) — there's no upright style to fall back to.
+              // Playfair Display only comes in italic here.
               fontStyle: s.family === "Playfair Display" ? "italic" : "normal",
               lineHeight: s.lineHeight,
               letterSpacing: `${s.letterSpacing}em`,
             }}
           >
-            The quick brown fox jumps over the lazy dog
+            {text}
           </p>
         </div>
       ))}

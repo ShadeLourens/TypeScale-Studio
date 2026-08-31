@@ -13,10 +13,8 @@ interface ImageProps {
   params: Promise<{ slug: string }>;
 }
 
-// Static per-weight instances only — Satori (the engine behind ImageResponse)
-// can't parse variable fonts. See scripts/fetch-fonts.sh for how these were
-// sourced. Playfair Display's only loaded instances are italic (deliberate
-// pairing choice, see lib/fonts.ts) — there's no upright style to select.
+// The exact font files used when generating a preview image. Playfair
+// Display only comes in italic here — a style choice, not an accident.
 const FONT_FILES: Record<
   CuratedFontFamily,
   { weight: 400 | 600; style: "normal" | "italic"; file: string }[]
@@ -63,20 +61,16 @@ const FONT_FILES: Record<
   ],
 };
 
-// A StepOverride's weight is an unconstrained number (spec.md §2 lets a
-// designer set anything) — but we've only ever loaded 400/600 instances per
-// family (see FONT_FILES). Satori doesn't nearest-match a requested weight
-// against the fonts it was given the way a browser does — an unmatched
-// weight (e.g. a stray "4" from a half-finished edit) makes it silently fall
-// back to a different font entirely rather than the closest loaded weight of
-// the right family. Snapping here keeps the rendered line in its intended
-// family regardless of what a step override actually stored.
+// Someone could technically set a step's weight to any number, but only
+// regular (400) and semi-bold (600) font files are actually loaded here.
+// This rounds any other value to whichever of those two is closer, so the
+// preview image never breaks or shows the wrong font.
 function nearestLoadedWeight(weight: number): 400 | 600 {
   return Math.abs(weight - 600) < Math.abs(weight - 400) ? 600 : 400;
 }
 
-/** Loads both weight instances for each distinct family actually needed —
- * only the families present in the sampled steps, never all five. */
+/** Loads the font files needed for this particular preview image only —
+ * not all five fonts every time, just whichever ones are actually shown. */
 async function loadFontsFor(families: CuratedFontFamily[]) {
   return Promise.all(
     families.flatMap((family) =>
@@ -90,8 +84,8 @@ async function loadFontsFor(families: CuratedFontFamily[]) {
   );
 }
 
-// No `runtime` export — defaults to 'nodejs' (current guidance; 'edge' is
-// deprecated) — required for the node:fs font reads below to work at all.
+// Generates the preview image shown when a shared link is posted elsewhere
+// (like in a chat app or on social media).
 export default async function Image({ params }: ImageProps) {
   const { slug } = await params;
   const scale = await getScaleBySlug(slug);
@@ -117,39 +111,27 @@ export default async function Image({ params }: ImageProps) {
   }
 
   const steps = resolveScale(scale.config);
-  // Largest-first sample of the base and up to 2 steps above it. Worst-case
-  // height check: 3 lines x 90px cap x lineHeight:1 = 270px, + 2x8px margins
-  // = 286px, well inside the 630 - 128 (padding) = 502px available above the
-  // footer line — a larger sample/cap could clip or push the footer off-canvas.
+  // Shows up to 3 of the biggest sizes, largest first, sized to fit neatly
+  // above the footer line without overflowing the image.
   const sample = steps
     .filter((s) => s.step >= 0)
     .sort((a, b) => b.step - a.step)
     .slice(0, 3);
 
-  // scale.name can be up to 200 chars (see MAX_NAME_LENGTH in scales.ts) and
-  // is rendered once per sample line — truncate before it reaches the image.
+  // Scale names can be long — this trims it down so it always fits.
   const displayName =
     scale.name.length > 30 ? `${scale.name.slice(0, 30)}…` : scale.name;
 
-  // Usually just the heading family (the default stepsUp:5 puts the whole
-  // sample above base) — but a small stepsUp can pull step 0 (body font)
-  // into the sample too, which doubles as a nice showcase of the actual
-  // heading/body pairing in one image. The body family is always included
-  // even if no sampled step needs it, because the footer line below is
-  // always set in it — once a custom `fonts` array is passed to
-  // ImageResponse at all, Satori appears to default any *unmatched* family
-  // (including "no family specified") to `fonts[0]` rather than falling back
-  // to its own generic default, so the footer needs a real, loaded family
-  // rather than being left unset. Dedupe so an overlapping choice (or
-  // heading === body) doesn't read the same files twice.
+  // Works out which fonts actually need to be loaded for this image (the
+  // body font is always included, since the footer text always uses it),
+  // without loading the same font twice.
   const families = [
     ...new Set([...sample.map((s) => s.family), scale.config.fonts.body.family]),
   ];
   const colors = THEME_COLORS[scale.config.theme];
 
-  // A missing/corrupt font file on disk should degrade to next/og's built-in
-  // fallback font, never break the image route — this route always returns
-  // a PNG, font-loading failure or not.
+  // If loading a font file ever fails for some reason, fall back to a
+  // default font rather than breaking the image entirely.
   let fonts: Awaited<ReturnType<typeof loadFontsFor>> | undefined;
   try {
     fonts = await loadFontsFor(families);
@@ -196,7 +178,7 @@ export default async function Image({ params }: ImageProps) {
             scale.config.fonts.body.family === "Playfair Display"
               ? "italic"
               : "normal",
-          fontWeight: 400, // explicit — an unset weight risks the same unmatched-font fallback nearestLoadedWeight guards against above
+          fontWeight: 400,
           fontSize: 28,
           color: colors.muted,
         }}

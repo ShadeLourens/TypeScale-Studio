@@ -10,24 +10,21 @@ import {
 } from "./scale";
 import type { FontChoice, ScaleConfig, StepOverride } from "./scale";
 
-// This file has one job: turn a ScaleConfig into a URL-safe string and back.
-// A ?c= value comes from wherever the user pastes a link, so decodeConfig
-// below treats it as untrusted input — everything from here down to
-// isScaleConfig() exists to reject anything that isn't a real, current-shape
-// ScaleConfig before the app ever trusts it.
+// This file turns a scale's settings into a shareable link, and back again.
+// Since anyone could paste in a made-up or broken link, everything below
+// carefully checks the data before the app trusts it.
 
-/** True for `{}`-style objects — rejects null, arrays, and primitives. */
+/** True for plain `{}`-style objects — false for null, arrays, etc. */
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** Rejects NaN/Infinity too, not just non-numbers — a URL can spell either. */
+/** True for real, usable numbers — false for things like NaN or Infinity. */
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
-/** Checks value is a string that's one of the given literal-union options,
- * e.g. isOneOf(value, ROUNDING_VALUES) for the "none"/"nearest-px"/... union. */
+/** Checks that a value is one of an allowed list of options. */
 function isOneOf<T extends string>(
   value: unknown,
   options: readonly T[],
@@ -37,7 +34,7 @@ function isOneOf<T extends string>(
   );
 }
 
-/** Validates one FontChoice (config.fonts.heading or .body). */
+/** Checks that a font choice (heading or body) is valid. */
 function isFontChoice(value: unknown): value is FontChoice {
   if (!isPlainObject(value)) return false;
   if (!isOneOf(value.family, CURATED_FONT_FAMILIES)) return false;
@@ -46,7 +43,8 @@ function isFontChoice(value: unknown): value is FontChoice {
   return isOneOf(value.fallback, FONT_FALLBACK_VALUES);
 }
 
-// Every StepOverride field is optional — only type-check fields that are present.
+// A step's manual tweaks are all optional, so this only checks the fields
+// that are actually present.
 function isStepOverride(value: unknown): value is StepOverride {
   if (!isPlainObject(value)) return false;
   if (value.weight !== undefined && !isFiniteNumber(value.weight)) return false;
@@ -59,24 +57,19 @@ function isStepOverride(value: unknown): value is StepOverride {
   return true;
 }
 
-// overrides is keyed by step number as a string ("3", "-1", ...) — we only
-// check that every value is a well-formed StepOverride; the keys themselves
-// aren't validated (see url-state.test.ts / the plan notes for why that's fine).
+// Checks every manual tweak in the list is valid.
 function isOverridesRecord(
   value: unknown,
 ): value is Record<string, StepOverride> {
   return isPlainObject(value) && Object.values(value).every(isStepOverride);
 }
 
-/** Top-level check: is this unknown value actually a valid ScaleConfig?
- * Walks the same shape as the ScaleConfig interface in scale.ts, field by
- * field — keep the two in sync if that interface ever changes. Exported
- * because it's reused wherever untrusted data claims to be a ScaleConfig,
- * not just URL params: the saveScale Server Action (a public POST endpoint)
- * and a defensive re-check on jsonb rows read back from the database. */
+/** Checks that some unknown data is actually a real, usable scale.
+ * Used to check links, saved scales, and anything else that comes from
+ * outside the app before it's trusted. */
 export function isScaleConfig(value: unknown): value is ScaleConfig {
   if (!isPlainObject(value)) return false;
-  if (value.version !== 1) return false; // only version supported today, no migration path yet
+  if (value.version !== 1) return false; // only one version exists so far
 
   const base = value.base;
   if (!isPlainObject(base)) return false;
@@ -96,20 +89,20 @@ export function isScaleConfig(value: unknown): value is ScaleConfig {
   return true;
 }
 
-/** JSON.stringify + lz-string's URL-safe compression (no extra encodeURIComponent needed). */
+/** Turns a scale's settings into a compact, URL-safe piece of text. */
 export function encodeConfig(config: ScaleConfig): string {
   return compressToEncodedURIComponent(JSON.stringify(config));
 }
 
 /**
- * Inverse of encodeConfig. Never throws — returns null for anything that isn't
- * a valid, current-version ScaleConfig, so callers can fall back to defaults.
+ * Undoes encodeConfig. Never crashes — if the link is broken or was
+ * tampered with, it just returns null so the app can fall back to defaults.
  */
 export function decodeConfig(encoded: string): ScaleConfig | null {
   try {
     const json = decompressFromEncodedURIComponent(encoded);
-    // lz-string's shipped .d.ts claims this returns `string`, but it actually
-    // returns null at runtime for invalid/empty input — don't trust the type.
+    // The library's own types say this always returns a string, but it can
+    // actually return null for bad input — so it's checked anyway.
     if (!json) return null;
     const parsed: unknown = JSON.parse(json);
     return isScaleConfig(parsed) ? parsed : null;

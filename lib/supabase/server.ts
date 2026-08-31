@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
-/** Server-side Supabase client — for Server Components, Server Actions, and Route Handlers. */
+/** Connects to Supabase (the database/login service) from server-side code. */
 export async function createClient() {
   const cookieStore = await cookies();
 
@@ -14,15 +14,14 @@ export async function createClient() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          // Server Components can't set cookies — this throws there, which is
-          // expected and safe to ignore: the proxy (proxy.ts) refreshes the
-          // session on every request, so Server Component calls never need to.
+          // Some pages aren't allowed to update cookies directly, so this can
+          // safely fail there — proxy.ts keeps the login session fresh instead.
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
               cookieStore.set(name, value, options);
             });
           } catch {
-            // ignore — see comment above
+            // safe to ignore, see above
           }
         },
       },

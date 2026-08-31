@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { FONT_CLASS_NAMES } from "@/lib/fonts";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { AmbientBackground } from "@/components/layout/AmbientBackground";
+import logo from "@/assets/logo/TS-LOGO.png";
 import "./globals.css";
 
-// There's no app/page.tsx yet, so "/" 404s on purpose; the real editor
-// lives at /editor.
+// Visiting the site's root address sends people straight to the editor
+// (see next.config.ts) instead of showing a separate homepage.
 export const metadata: Metadata = { title: "TypeScale Studio" };
 
-// Dark is the app's default theme (not OS-detected) — a deliberate
-// differentiator, not a prefers-color-scheme read: every other type-scale
-// tool defaults to light. The inline script below only ever overrides to
-// light, when that's the stored choice — there's no matchMedia branch.
+// Dark mode is the default here, on purpose — most similar tools default
+// to light mode, so this stands out. The script below only ever switches
+// to light mode if someone has chosen that before.
 const THEME_INIT_SCRIPT = `(function(){try{
   var t=localStorage.getItem("typescale-studio:theme");
   if(t==="light"){document.documentElement.setAttribute("data-theme","light");}
@@ -23,31 +24,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    // data-theme="dark" is the server-rendered default (keeps the route
-    // statically prerenderable — a server-side cookie read here would opt
-    // the whole app out of that). suppressHydrationWarning only on <html>,
-    // since the inline script below may have already overridden the
-    // attribute before React hydrates.
     <html lang="en" data-theme="dark" suppressHydrationWarning>
       <head>
-        {/* Runs before paint, synchronously — this is what prevents a
-            flash of the wrong theme on load for a returning visitor who
-            chose light mode. Must stay a raw <script>, not next/script:
-            next/script's earliest strategy still doesn't guarantee
-            pre-paint execution the way a plain <head> script does. */}
+        {/* Runs immediately, before the page is shown, so returning
+            visitors who chose light mode never see a flash of dark mode
+            first. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      {/* Every curated family's CSS variable is defined here so the editor
-          and the public /s/[slug] page both get them for free. */}
+      {/* Every font the app uses is loaded here once, so any page can use
+          any of them. */}
       <body className={FONT_CLASS_NAMES}>
-        {/* First in DOM order, `fixed`, no z-index — see the component's
-            own comment for why that's deliberate. Gives every `surface`
-            glass panel something textured behind it to actually blur. */}
+        {/* The colorful background shapes seen behind the glass panels. */}
         <AmbientBackground />
         <header className="surface sticky top-0 z-10 mx-3 mt-3 flex items-center justify-between gap-3 rounded-lg px-4 py-2.5">
-          <span className="text-sm font-semibold tracking-tight">
-            TypeScale Studio
-          </span>
+          <Image src={logo} alt="TypeScale Studio" priority className="h-7 w-auto" />
           <ThemeToggle />
         </header>
         {children}

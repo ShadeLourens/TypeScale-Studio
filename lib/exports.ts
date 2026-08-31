@@ -1,29 +1,27 @@
 import { resolveScale, type ScaleConfig } from "./scale";
 
 /**
- * "0", "up-3", "down-2" — shared by toCSS, toTailwind, and toTokens so the
- * same step is addressable by the same name across every export format.
- * Deliberately avoids signed numbers in the name: Tailwind v4's @theme block
- * treats a second "--" after the namespace as the start of a compound
- * sub-property (e.g. --text-name--line-height), so a name like "step--2"
- * risks being misparsed as an unrecognized compound key and silently dropped.
+ * Turns a step number into a name like "0", "up-3", or "down-2", so every
+ * export format (CSS, Tailwind, JSON) names the same step the same way.
+ * Uses words instead of a minus sign because some tools don't handle a
+ * literal "-2" well inside a variable name.
  */
 function stepSuffix(step: number): string {
   if (step === 0) return "0";
   return step > 0 ? `up-${step}` : `down-${-step}`;
 }
 
-/** Renders a resolved font size as `${rem}rem`, e.g. "1rem", "3.0518rem". */
+/** Formats a font size as text, e.g. "1rem", "3.0518rem". */
 function formatRem(rem: number): string {
   return `${rem}rem`;
 }
 
-/** Letter spacing always keeps an explicit "em" suffix, including "0em". */
+/** Formats letter spacing as text, always ending in "em", e.g. "0em". */
 function formatEm(value: number): string {
   return `${value}em`;
 }
 
-/** :root block of plain CSS custom properties, four per step (size/line-height/weight/letter-spacing). */
+/** Exports the scale as plain CSS variables. */
 export function toCSS(config: ScaleConfig): string {
   const steps = resolveScale(config);
   const blocks = steps.map((s) => {
@@ -38,8 +36,7 @@ export function toCSS(config: ScaleConfig): string {
   return `:root {\n${blocks.join("\n\n")}\n}`;
 }
 
-/** Tailwind v4 @theme block — pastes directly into a project's CSS to generate
- * real text-step-0 / text-step-up-3 / text-step-down-2 utility classes. */
+/** Exports the scale in a format that plugs straight into a Tailwind project. */
 export function toTailwind(config: ScaleConfig): string {
   const steps = resolveScale(config);
   const blocks = steps.map((s) => {
@@ -54,11 +51,7 @@ export function toTailwind(config: ScaleConfig): string {
   return `@theme {\n${blocks.join("\n\n")}\n}`;
 }
 
-/** Flat JSON design tokens. Intentionally not the full W3C DTCG $type/$value
- * spec — more ceremony than this scope needs. `name` matches the CSS-var /
- * Tailwind-class suffix so this doubles as a lookup table across formats.
- * Only resolved (post-override) values are included — echoing raw
- * config.overrides too would create two disagreeing sources of truth. */
+/** Exports the scale as a simple JSON file, for design tools or other apps. */
 export function toTokens(config: ScaleConfig): string {
   const steps = resolveScale(config);
   const tokens = {

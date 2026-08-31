@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
-/** Same-origin-only check as app/login/page.tsx's resolveSafeRedirect —
- * the `next` param comes from a URL, so it's untrusted input. */
+/** Same safety check as the login page — makes sure this only ever
+ * redirects back within this site. */
 function resolveSafeRedirect(next: string | null): string {
   if (next && next.startsWith("/") && !next.startsWith("//")) {
     return next;
@@ -11,6 +11,7 @@ function resolveSafeRedirect(next: string | null): string {
   return "/editor";
 }
 
+// The link someone lands on after clicking the sign-in link in their email.
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const tokenHash = searchParams.get("token_hash");

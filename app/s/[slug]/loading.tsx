@@ -1,6 +1,4 @@
-// Shown while getScaleBySlug resolves — app/s/[slug]/page.tsx is a Server
-// Component with a real Supabase round trip, so without this the route
-// would otherwise just show a blank page until it resolves.
+// Shown automatically while a shared scale is still loading.
 export default function SharedScaleLoading() {
   return (
     <div className="flex min-h-screen flex-col gap-6 p-6">

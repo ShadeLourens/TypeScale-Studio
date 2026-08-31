@@ -1,9 +1,7 @@
 "use client";
 
-// Required by convention: a route-level error boundary must be a Client
-// Component. Catches uncaught render errors anywhere in the app segment
-// instead of Next's generic error overlay. `reset` re-renders the segment,
-// giving the user a real recovery path rather than a dead end.
+// A friendly error page shown if something breaks, with a button to try
+// again instead of leaving someone stuck.
 export default function ErrorBoundary({
   reset,
 }: {

@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
-# Fetches the five curated font families into assets/fonts/.
-#
-# Google's CSS API only advertises variable WOFF2 to modern browsers, but
-# fonts.gstatic.com still serves genuine static per-weight TTFs — a legacy
-# user-agent is enough to get those URLs back instead. Satori (the engine
-# behind next/og's ImageResponse) can't parse variable fonts at all, so this
-# is the only reliable way to source files it can actually use. See
-# lib/fonts.ts and app/s/[slug]/opengraph-image.tsx for where these land.
+# Downloads the app's five fonts into assets/fonts/, in the exact file
+# format the app needs (see lib/fonts.ts and the OG image generator for
+# where these files get used).
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -20,16 +15,13 @@ FAMILIES=(
   "Open Sans|Open+Sans:wght@400;600|open-sans|OpenSans-Regular.ttf|OpenSans-SemiBold.ttf"
   "Montserrat|Montserrat:wght@400;600|montserrat|Montserrat-Regular.ttf|Montserrat-SemiBold.ttf"
 )
-# Playfair Display uses its italic instances (a deliberate pairing choice,
-# not the upright weights) — fetched separately since its query and output
-# filenames don't fit the shared shape above.
+# Playfair Display is downloaded separately, in italic (a style choice).
 PLAYFAIR_QUERY="Playfair+Display:ital,wght@1,400;1,600"
 PLAYFAIR_DIR="playfair-display"
 PLAYFAIR_REGULAR="PlayfairDisplay-Italic.ttf"
 PLAYFAIR_SEMIBOLD="PlayfairDisplay-SemiBoldItalic.ttf"
 
-# Extracts the two font-file URLs (400 first, 600 second) from a Google
-# Fonts CSS2 response, in the order the @font-face blocks appear.
+# Pulls the two font-file download links out of Google's response.
 extract_urls() {
   grep -o 'url([^)]*)' | sed -E 's/url\(([^)]*)\)/\1/'
 }
@@ -61,7 +53,7 @@ fetch_family() {
 
 for entry in "${FAMILIES[@]}"; do
   IFS='|' read -r _name query dir regular semibold <<<"$entry"
-  # repo_slug (for the OFL.txt path) is just the dir name with hyphens removed.
+  # Used to find each font's license file.
   repo_slug="${dir//-/}"
   fetch_family "$dir" "$query" "$regular" "$semibold" "$repo_slug"
 done

@@ -1,15 +1,7 @@
-// Textured backdrop for every `surface` glass panel to actually blur
-// against — without this, backdrop-filter has nothing but a flat page
-// color behind it, so glass panels read as plain translucent boxes rather
-// than glass (confirmed by eye after milestone 6 first shipped). Purely
-// decorative (aria-hidden), fixed behind all page content — no
-// interactivity, no client boundary needed.
-//
-// Positioned via `fixed` + DOM order (first child of <body>, see
-// app/layout.tsx), not a negative z-index: a fixed element with z-index:-1
-// can render behind <body>'s own painted background in some engines,
-// which would make it invisible. Plain DOM order avoids that risk
-// entirely and is also what the original reference does.
+// Soft, colorful, floating shapes behind every page. They're what makes the
+// frosted-glass panels actually look like glass — without something
+// colorful behind them to blur, a "glass" panel just looks like a plain
+// grey box. Purely decorative, so screen readers skip over it.
 export function AmbientBackground() {
   return (
     <div
@@ -46,8 +38,7 @@ export function AmbientBackground() {
           filter: "blur(70px)",
         }}
       />
-      {/* Faint grain so the blurred wash doesn't look like a flat gradient —
-          dot color tracks --color-foreground so it reads on both themes. */}
+      {/* A faint dotted texture so the colors don't look like a flat, boring gradient. */}
       <div
         className="absolute inset-0 opacity-40"
         style={{

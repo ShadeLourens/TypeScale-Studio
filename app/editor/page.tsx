@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useReducer, useRef } from "react";
+import { Suspense, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { editorReducer, initialEditorConfig } from "@/lib/editor-reducer";
 import { resolveScale, type ScaleConfig } from "@/lib/scale";
@@ -8,6 +8,7 @@ import { decodeConfig, encodeConfig } from "@/lib/url-state";
 import { toCSS, toTailwind, toTokens } from "@/lib/exports";
 import { saveScale } from "@/lib/actions/scales";
 import { SAVE_STASH_KEY, parsePendingSave } from "@/lib/save-stash";
+import { useAppTheme } from "@/lib/use-app-theme";
 import { ControlsPanel } from "@/components/editor/ControlsPanel";
 import { ScalePreview } from "@/components/editor/ScalePreview";
 import { ExportSheet } from "@/components/editor/ExportSheet";
@@ -16,19 +17,16 @@ import { SaveButton } from "@/components/editor/SaveButton";
 const URL_PARAM = "c";
 const URL_SYNC_DEBOUNCE_MS = 300;
 
-// Runs exactly once on first render (useReducer's lazy-init form) — never on
-// later renders, even when searchParams changes from our own replace() calls
-// below. That's what avoids a "default config, then replaced" flash on load.
+// Loads the scale from the link (if there is one) when the page first opens.
 function initConfigFromSearchParam(paramValue: string | null): ScaleConfig {
   if (!paramValue) return initialEditorConfig;
   return decodeConfig(paramValue) ?? initialEditorConfig;
 }
 
-// The whole editor is: one reducer holding a ScaleConfig, run through the pure
-// resolveScale() on every change, rendered by two dumb components. No other
-// state lives here — this is the "one source of truth" the spec calls for.
-// The URL is a mirror of that state, not a second source of truth: it's read
-// once to seed the reducer, then kept in sync (debounced) after every change.
+// This whole page works around one thing: a scale's settings, kept in one
+// place, that everything else is calculated from. The link in the address
+// bar is kept in sync with those settings, so the page can always be
+// reopened or shared exactly as it was.
 function EditorPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -39,8 +37,20 @@ function EditorPageInner() {
     searchParams.get(URL_PARAM),
     initConfigFromSearchParam,
   );
-  // useMemo avoids recomputing the scale on renders that don't change config
-  // (e.g. if this page ever gets sibling state that re-renders independently).
+
+  // A scale's theme now just follows the app's own Light/Dark toggle,
+  // rather than being set separately.
+  const appTheme = useAppTheme();
+  useEffect(() => {
+    if (config.theme !== appTheme) {
+      dispatch({ type: "setTheme", theme: appTheme });
+    }
+  }, [appTheme, config.theme]);
+  // Lets someone type their own preview text — kept separate from the
+  // scale's saved settings, so it's just for trying things out and resets
+  // whenever the page reloads.
+  const [sampleText, setSampleText] = useState<string | undefined>(undefined);
+
   const steps = useMemo(() => resolveScale(config), [config]);
   const exportOutputs = useMemo(
     () => ({
@@ -51,10 +61,8 @@ function EditorPageInner() {
     [config],
   );
 
-  // Skip the mount-time run: config is already correct (from the URL or the
-  // untouched default) via the lazy initializer above, so re-encoding and
-  // replacing on a bare page load would be a pointless URL rewrite before the
-  // user has changed anything.
+  // Skips updating the link the very first time the page loads, since it
+  // would just be rewriting the same link that's already there.
   const isFirstEffectRun = useRef(true);
 
   useEffect(() => {
@@ -69,21 +77,8 @@ function EditorPageInner() {
     return () => clearTimeout(timeoutId);
   }, [config, pathname, router]);
 
-  // Restores a config stashed (by SaveButton) before a login redirect, then
-  // immediately retries the save now that the user is authenticated.
-  //
-  // This dispatches loadConfig on mount, which also re-triggers the
-  // URL-sync effect above (isFirstEffectRun only skips its very first run,
-  // not this one) — a router.replace(...?c=...) gets scheduled ~300ms out
-  // at the same time this effect's saveScale call is in flight. Deliberately
-  // not suppressed: on success, saveScale (a single DB insert) reliably
-  // resolves before 300ms and router.push('/s/[slug]') unmounts this page
-  // first, so the pending replace's cleanup cancels it before it fires — on
-  // the rare slow-connection case where the timer wins, the worst outcome is
-  // one harmless replace immediately followed by the push. On failure, no
-  // navigation happens, so letting the URL-sync effect fire is actually
-  // correct — it keeps the URL in sync with the restored config so a refresh
-  // doesn't lose it.
+  // If someone tried to save a scale before logging in, this picks it back
+  // up once they're signed in and finishes saving it for them.
   useEffect(() => {
     const stashed = parsePendingSave(sessionStorage.getItem(SAVE_STASH_KEY));
     if (!stashed) return;
@@ -95,23 +90,27 @@ function EditorPageInner() {
   }, [router]);
 
   return (
-    <div className="flex min-h-screen flex-col gap-6 p-6 md:flex-row">
+    <div className="flex min-h-screen flex-col items-center gap-6 p-6 editor:flex-row editor:items-stretch">
       <ControlsPanel config={config} dispatch={dispatch} />
-      <ScalePreview steps={steps} theme={config.theme} />
+      <ScalePreview
+        steps={steps}
+        theme={config.theme}
+        sampleText={sampleText}
+        onSampleTextChange={setSampleText}
+      />
       <ExportSheet
         css={exportOutputs.css}
         tailwind={exportOutputs.tailwind}
         tokens={exportOutputs.tokens}
-      />
-      <SaveButton config={config} />
+      >
+        <SaveButton config={config} />
+      </ExportSheet>
     </div>
   );
 }
 
-// useSearchParams() requires a Suspense boundary or Next bails the whole route
-// out of static optimization with a build warning. This route has no static
-// content to protect either way, so the fix is just moving the body into an
-// inner component and wrapping it here.
+// Next.js requires this kind of page to be wrapped like this when it reads
+// the link's search text (the ?c=... part of the URL).
 export default function EditorPage() {
   return (
     <Suspense fallback={null}>

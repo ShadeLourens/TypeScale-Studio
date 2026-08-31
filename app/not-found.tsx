@@ -1,8 +1,6 @@
 import Link from "next/link";
 
-// Global 404 — catches the intentional "/" 404 (see app/layout.tsx) and any
-// mistyped route. Previously absent, so every 404 fell through to Next's
-// fully generic default page.
+// The page shown for any link that doesn't lead anywhere real.
 export default function NotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">

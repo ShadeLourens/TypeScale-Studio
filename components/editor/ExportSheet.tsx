@@ -1,17 +1,20 @@
 "use client";
 
-import { useRef, useState, type KeyboardEvent } from "react";
+import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 export interface ExportSheetProps {
   css: string;
   tailwind: string;
   tokens: string;
+  // Anything else to show below the Copy button, inside this same card —
+  // e.g. the Save button.
+  children?: ReactNode;
 }
 
 type ExportTab = "css" | "tailwind" | "tokens";
 
-// Explicit order, not Object.keys(TAB_LABELS) — the keyboard handler below
-// needs a stable array to compute next/previous/first/last against.
+// Kept as a fixed list (not just the object's keys) so the keyboard
+// shortcuts below can reliably move to the next/previous/first/last tab.
 const TAB_ORDER: ExportTab[] = ["css", "tailwind", "tokens"];
 const TAB_LABELS: Record<ExportTab, string> = {
   css: "CSS",
@@ -19,10 +22,12 @@ const TAB_LABELS: Record<ExportTab, string> = {
   tokens: "JSON",
 };
 
-// "use client" for state + navigator.clipboard — unlike ScalePreview, this
-// component has no future server-render use case, so there's no reason to
-// avoid client state here (same reasoning as ControlsPanel).
-export function ExportSheet({ css, tailwind, tokens }: ExportSheetProps) {
+export function ExportSheet({
+  css,
+  tailwind,
+  tokens,
+  children,
+}: ExportSheetProps) {
   const [activeTab, setActiveTab] = useState<ExportTab>("css");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
     "idle",
@@ -33,9 +38,8 @@ export function ExportSheet({ css, tailwind, tokens }: ExportSheetProps) {
   );
 
   async function handleCopy() {
-    // clipboard.writeText rejects in insecure contexts or on permission
-    // denial — the try/catch here is a real correctness concern, not
-    // decoration, since an unhandled rejection would be a silent bug.
+    // Copying can fail (e.g. if the browser blocks it), so this is handled
+    // instead of just assuming it always works.
     try {
       await navigator.clipboard.writeText(content[activeTab]);
       setCopyState("copied");
@@ -45,12 +49,8 @@ export function ExportSheet({ css, tailwind, tokens }: ExportSheetProps) {
     setTimeout(() => setCopyState("idle"), 1500);
   }
 
-  // WAI-ARIA Tabs pattern, automatic-activation variant: an arrow key both
-  // moves focus AND activates the tab in one step, matching this
-  // component's existing click-to-activate model rather than introducing a
-  // second "focus vs. select" distinction. Wraps circularly; Home/End jump
-  // to the ends. role="tab"/aria-selected alone (without this) is a
-  // half-applied ARIA pattern — using the roles obligates the keyboard model.
+  // Lets someone use the arrow keys, Home, and End to switch between tabs,
+  // the same way tabs work on most other websites.
   function handleTabKeyDown(e: KeyboardEvent<HTMLButtonElement>) {
     const currentIndex = TAB_ORDER.indexOf(activeTab);
     let nextIndex: number | null = null;
@@ -65,8 +65,6 @@ export function ExportSheet({ css, tailwind, tokens }: ExportSheetProps) {
     }
     if (nextIndex === null) return;
     const next = TAB_ORDER[nextIndex];
-    // nextIndex is always a valid TAB_ORDER index (modulo/clamped above) —
-    // this check is only here to satisfy noUncheckedIndexedAccess.
     if (!next) return;
     e.preventDefault();
     setActiveTab(next);
@@ -76,7 +74,9 @@ export function ExportSheet({ css, tailwind, tokens }: ExportSheetProps) {
   return (
     <section
       aria-label="Export"
-      className="surface flex w-full max-w-xl flex-col gap-3 p-4"
+      // Sized to match the settings card on the other side of the screen,
+      // and to fit its own content rather than stretching to fill the page.
+      className="surface flex w-full max-w-sm flex-col gap-3 self-center p-4 editor:self-start"
     >
       <div className="flex gap-2" role="tablist" aria-label="Export format">
         {TAB_ORDER.map((tab) => (
@@ -90,8 +90,8 @@ export function ExportSheet({ css, tailwind, tokens }: ExportSheetProps) {
             id={`export-tab-${tab}`}
             aria-controls="export-tabpanel"
             aria-selected={activeTab === tab}
-            // Roving tabindex: only the active tab is a Tab stop — arrow
-            // keys move between the rest, per the ARIA Tabs pattern.
+            // Only the active tab can be reached by pressing Tab — the
+            // arrow keys handle moving between the others.
             tabIndex={activeTab === tab ? 0 : -1}
             onClick={() => setActiveTab(tab)}
             onKeyDown={handleTabKeyDown}
@@ -124,6 +124,11 @@ export function ExportSheet({ css, tailwind, tokens }: ExportSheetProps) {
             ? "Copy failed"
             : "Copy"}
       </button>
+      {children && (
+        <div className="flex justify-end border-t border-border pt-3 pb-4">
+          {children}
+        </div>
+      )}
     </section>
   );
 }
